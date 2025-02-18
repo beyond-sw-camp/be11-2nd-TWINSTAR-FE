@@ -1,8 +1,10 @@
 import {createRouter, createWebHistory} from 'vue-router';
 import { userRouter } from './userRouter';
+import { chatRouter } from './ChatRouter';
 
 const routes = [
     ...userRouter,
+    ...chatRouter,
 ]
 
 const router = createRouter({
