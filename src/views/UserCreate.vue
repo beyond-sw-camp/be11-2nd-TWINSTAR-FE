@@ -8,12 +8,7 @@
                     </v-card-title>
                     <v-card-text>
                         <v-form @keydown.enter="create">
-                            <v-text-field
-                            label="name"
-                            v-model="name"
-                            prepend-icon="mdi-account"
-                            required
-                            />
+                            
                             <v-text-field
                             label="email"
                             v-model="email"
@@ -26,6 +21,18 @@
                             v-model="password"
                             type="password"
                             prepend-icon="mdi-lock"
+                            required
+                            />
+                            <v-text-field
+                            label="name"
+                            v-model="name"
+                            prepend-icon="mdi-account"
+                            required
+                            />
+                            <v-text-field
+                            label="sex"
+                            v-model="sex"
+                            prepend-icon="mdi-sex"
                             required
                             />
                             <v-row>
