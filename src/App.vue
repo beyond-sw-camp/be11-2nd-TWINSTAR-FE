@@ -1,6 +1,7 @@
 <template>
 <v-app>
-  <HeaderComponent/>
+  <!-- 로그인페이지가 아닐때만 헤더표시 -->
+  <HeaderComponent v-if="!isLoginPage && !isCreatePage"/> 
   <v-main>
   <router-view/>
   </v-main>
@@ -16,6 +17,14 @@ export default {
   components: {
     HeaderComponent,
     FooterComponent
+  },
+  computed: {
+    isLoginPage() {
+      return this.$route.path === "/user/login";
+    },
+    isCreatePage(){
+      return this.$route.path === "/user/create";
+    }
   }
 }
 </script>
