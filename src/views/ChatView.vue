@@ -43,7 +43,7 @@
 
 <script>
 export default {
-    name: 'ChatRoom',
+    name: 'ChatView',
     data() {
         return {
             messages: [
