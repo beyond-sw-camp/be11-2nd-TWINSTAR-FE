@@ -147,12 +147,13 @@ h1 {
 .form-group {
   position: relative;
   margin-bottom: 20px;
+  padding-top: 20px;
 }
 
 .form-group i:not(.password-toggle) {
   position: absolute;
   left: 15px;
-  top: 50%;
+  top: calc(50% + 10px);
   transform: translateY(-50%);
   color: #a0aec0;
   pointer-events: none;
@@ -275,6 +276,9 @@ input:focus {
 }
 
 .error-message {
+  position: absolute;
+  top: 0;
+  left: 0;
   color: #e53e3e;
   font-size: 0.8rem;
   margin-bottom: 5px;
