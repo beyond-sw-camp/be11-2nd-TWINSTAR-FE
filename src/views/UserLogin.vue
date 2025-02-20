@@ -44,7 +44,7 @@
         </div>
         <button type="submit" class="login-button">로그인</button>
         <div class="register-link">
-          계정이 없으신가요? <a href="/user/create">회원가입</a>
+          계정이 없으신가요? <router-link to="/user/create">회원가입</router-link>
         </div>
       </form>
     </div>
