@@ -263,12 +263,17 @@ input:focus {
 .password-toggle {
   position: absolute;
   right: 15px;
-  top: 50%;
+  top: calc(50% + 10px);
   transform: translateY(-50%);
   color: #a0aec0;
   cursor: pointer;
   transition: color 0.3s ease;
   z-index: 1;
+  width: 20px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .password-toggle:hover {
