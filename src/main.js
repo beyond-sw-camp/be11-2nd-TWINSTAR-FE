@@ -32,31 +32,32 @@ axios.interceptors.response.use(
     async error => {
         const originalRequest = error.config;
         
-        // 토큰이 만료되었거나 없는 경우 (401 에러)
-        if (error.response && error.response.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
             
             try {
                 const refreshToken = localStorage.getItem('refreshToken');
                 if (!refreshToken) {
-                    throw new Error('No refresh token');
+                    throw new Error('리프레시 토큰이 없습니다');
                 }
                 
-                // 리프레시 토큰으로 새로운 액세스 토큰 발급 시도
                 const response = await axios.post(
-                    `${process.env.VUE_APP_API_BASE_URL}/member/refresh-token`,
-                    { refreshToken }
+                    `${process.env.VUE_APP_API_BASE_URL}/user/refresh-token`,
+                    { refreshToken },
+                    { 
+                        headers: { 'Content-Type': 'application/json' },
+                        _retry: true  // 리프레시 토큰 요청임을 표시
+                    }
                 );
                 
                 const newToken = response.data.token;
                 localStorage.setItem('token', newToken);
                 
-                // 새로운 토큰으로 원래 요청 재시도
                 originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
                 return axios(originalRequest);
                 
             } catch (e) {
-                // 리프레시 토큰도 만료되었거나 오류가 발생한 경우
+                console.error('토큰 갱신 실패:', e);
                 localStorage.clear();
                 window.location.href = '/user/login';
                 return Promise.reject(error);
