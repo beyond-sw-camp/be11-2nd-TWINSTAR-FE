@@ -53,6 +53,7 @@
 
 <script>
 import axios from 'axios'
+import { jwtDecode } from 'jwt-decode'
 
 export default{
     data() {
@@ -82,20 +83,43 @@ export default{
             return true;
         },
         async doLogin() {
-            this.loginError = ""; // 로그인 시도할 때마다 에러 메시지 초기화
+            this.loginError = ""; 
             if (!this.validateEmail()) {
                 console.log("이메일 유효성 검사 실패")
                 return;
             }
             try {
                 const loginData = {email:this.email, password:this.password};
-                const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user/doLogin`, loginData)
-                const token = response.data.token
-                const refreshToken = response.data.refreshToken
-                localStorage.setItem('token', token)
-                localStorage.setItem('refreshToken', refreshToken)
-                window.location.href = '/';
+                console.log('로그인 시도:', loginData);
+                
+                const response = await axios.post(`${process.env.VUE_APP_API_BASE_URL}/user/doLogin`, loginData);
+                console.log('로그인 응답:', response.data);
+                
+                const token = response.data.token;
+                const refreshToken = response.data.refreshToken;
+                
+                try {
+                    // JWT 토큰 디코딩을 별도의 try-catch로 분리
+                    const payload = jwtDecode(token);
+                    console.log('토큰 페이로드:', payload);
+                    
+                    // 토큰 저장
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('refreshToken', refreshToken);
+                    
+                    // 사용자 역할에 따른 리다이렉션
+                    if (payload.role === 'ADMIN') {
+                        console.log('관리자 권한 확인됨, 리다이렉션 시도');
+                        window.location.href = '/admin/dashboard';
+                    } else {
+                        window.location.href = '/';
+                    }
+                } catch (tokenError) {
+                    console.error('토큰 디코딩 에러:', tokenError);
+                    this.loginError = "토큰 처리 중 오류가 발생했습니다.";
+                }
             } catch (error) {
+                console.error('로그인 에러:', error.response?.data);
                 this.loginError = "이메일 주소 및 비밀번호가 틀렸습니다.";
             }
         }
