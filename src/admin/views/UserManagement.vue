@@ -2,21 +2,32 @@
     <div class="user-management">
         <h1>유저 관리</h1>
         
-        <!-- 검색 폼 -->
-        <div class="search-form">
-            <input 
-                v-model="searchParams.nickName" 
-                placeholder="닉네임으로 검색"
-                @keyup.enter="loadUsers"
-            >
-            <button @click="loadUsers">검색</button>
+        <!-- 검색창 수정 -->
+        <div class="search-container">
+            <div class="search-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input 
+                    type="text"
+                    v-model="searchParams.nickName"
+                    placeholder="닉네임으로 검색"
+                    @input="handleSearch"
+                    class="search-input"
+                />
+                <button 
+                    v-if="searchParams.nickName" 
+                    @click="clearSearch" 
+                    class="clear-button"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
 
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th>유저 아이디</th>
+                        <th>유저id</th>
                         <th>이메일</th>
                         <th>닉네임</th>
                         <th>성별</th>
@@ -30,7 +41,14 @@
                 </thead>
                 <tbody>
                     <tr v-for="user in users" :key="user.id">
-                        <td>{{ user.id }}</td>
+                        <td>
+                            <a 
+                                @click="viewUserDetail(user.id)" 
+                                class="user-id-link"
+                            >
+                                {{ user.id }}
+                            </a>
+                        </td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.nickName }}</td>
                         <td>{{ user.sex }}</td>
@@ -74,6 +92,34 @@
                 다음
             </button>
         </div>
+
+        <!-- 유저 상세 정보 모달 -->
+        <div v-if="showDetailModal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>유저 상세 정보</h3>
+                <div v-if="userDetail" class="user-detail">
+                    <div class="detail-row">
+                        <span class="label">유저 ID:</span>
+                        <span>{{ userDetail.id }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">닉네임:</span>
+                        <span>{{ userDetail.nickName }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">계정 상태:</span>
+                        <span>{{ userDetail.userStatus }}</span>
+                    </div>
+                    <div class="detail-row" v-if="userDetail.banCloseTime">
+                        <span class="label">정지 해제 일자:</span>
+                        <span>{{ formatDateTime(userDetail.banCloseTime) }}</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button @click="closeDetailModal" class="close-button">닫기</button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -90,7 +136,10 @@ export default {
             searchParams: {
                 nickName: ''
             },
-            pageSize: 10
+            pageSize: 10,
+            showDetailModal: false,
+            userDetail: null,
+            searchTimeout: null
         }
     },
     methods: {
@@ -107,26 +156,27 @@ export default {
         },
         async loadUsers() {
             try {
-                const params = new URLSearchParams({
+                const params = {
                     page: this.currentPage,
                     size: this.pageSize,
                     sort: 'id,DESC'
-                });
+                };
 
                 if (this.searchParams.nickName) {
-                    params.append('nickName', this.searchParams.nickName);
+                    params.nickName = this.searchParams.nickName;
                 }
 
                 const response = await axios.get(
-                    `${process.env.VUE_APP_API_BASE_URL}/user/admin/user/list?${params.toString()}`
+                    `${process.env.VUE_APP_API_BASE_URL}/user/admin/list/search`,
+                    { params }
                 );
                 
-                console.log('백엔드 응답 데이터:', response.data);
-                
-                // Page 객체에서 데이터 추출
-                this.users = response.data.content;
-                this.totalPages = response.data.totalPages;
-                this.currentPage = response.data.number;
+                if (response.data && response.data.result) {
+                    const pageData = response.data.result;
+                    this.users = pageData.content;
+                    this.totalPages = pageData.totalPages;
+                    this.currentPage = pageData.number;
+                }
                 
             } catch (error) {
                 console.error('유저 목록 로딩 실패:', error);
@@ -197,6 +247,38 @@ export default {
             this.currentPage = newPage;
             await this.loadUsers();
         },
+        async viewUserDetail(userId) {
+            try {
+                const response = await axios.get(
+                    `${process.env.VUE_APP_API_BASE_URL}/user/admin/detail/${userId}`
+                );
+                
+                if (response.data && response.data.result) {
+                    this.userDetail = response.data.result;
+                    this.showDetailModal = true;
+                }
+            } catch (error) {
+                console.error('유저 상세 정보 로딩 실패:', error);
+                alert('유저 상세 정보를 불러오는데 실패했습니다.');
+            }
+        },
+        closeDetailModal() {
+            this.showDetailModal = false;
+            this.userDetail = null;
+        },
+        handleSearch() {
+            // 디바운스 처리
+            if (this.searchTimeout) {
+                clearTimeout(this.searchTimeout);
+            }
+            this.searchTimeout = setTimeout(() => {
+                this.loadUsers();
+            }, 300);
+        },
+        clearSearch() {
+            this.searchParams.nickName = '';
+            this.loadUsers();
+        }
     },
     created() {
         this.loadUsers();
@@ -259,62 +341,66 @@ th {
     z-index: 1;
 }
 
-.search-form {
-    margin-bottom: 20px;
+.search-container {
+    margin: 20px 0;
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
 }
 
-.search-box {
+.search-wrapper {
     position: relative;
-    width: 300px;
+    width: 100%;
+    max-width: 400px;
+    background: #efefef;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    transition: all 0.3s ease;
+    height: 44px;
+}
+
+.search-wrapper:focus-within {
+    background: #e0e0e0;
 }
 
 .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #666;
-    font-size: 20px;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 12px 40px 12px 40px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    color: #8e8e8e;
     font-size: 14px;
-    transition: all 0.3s ease;
-    background-color: white;
+    margin-right: 12px;
 }
 
-.search-box input:focus {
+.search-input {
+    width: 100%;
+    height: 40px;
+    background: transparent;
+    border: none;
     outline: none;
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+    font-size: 14px;
+    color: #262626;
+    padding: 0;
 }
 
-.search-box input::placeholder {
-    color: #999;
+.search-input::placeholder {
+    color: #8e8e8e;
 }
 
-.clear-btn {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+.clear-button {
     background: none;
     border: none;
-    color: #666;
-    cursor: pointer;
     padding: 0;
-    font-size: 18px;
+    cursor: pointer;
+    color: #8e8e8e;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 20px;
+    height: 20px;
 }
 
-.clear-btn:hover {
-    color: #333;
+.clear-button:hover {
+    color: #262626;
 }
 
 .pagination {
@@ -366,5 +452,71 @@ th {
 
 .unban-button:hover {
     background-color: #218838;
+}
+
+.user-id-link {
+    color: #0d6efd;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.user-id-link:hover {
+    color: #0a58ca;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.user-detail {
+    margin: 20px 0;
+}
+
+.detail-row {
+    margin: 10px 0;
+    display: flex;
+    gap: 10px;
+}
+
+.label {
+    font-weight: bold;
+    min-width: 120px;
+}
+
+.modal-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.close-button {
+    padding: 8px 16px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.close-button:hover {
+    background-color: #5c636a;
 }
 </style>
