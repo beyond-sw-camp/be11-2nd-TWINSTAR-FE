@@ -36,7 +36,10 @@
           </div>
         </div>
   
-        <div class="chat-messages">
+        <div class="chat-messages" @scroll="handleScroll">
+          <div v-if="isLoading" class="loading-messages">
+            메시지 불러오는 중...
+          </div>
           <div
             v-for="(message) in chatMessages"
             :key="message.messageId"
@@ -136,6 +139,9 @@
         selectedUsers: [],
         searchKeyword: "",
         searchTimeout: null,
+        currentPage: 0,
+        isLoading: false,
+        hasMoreMessages: true,
       };
     },
     computed: {
@@ -156,8 +162,14 @@
           this.selectedRoomImage = selectedRoom.roomImage;
           selectedRoom.notReadCount = 0;
         }
+        
+        // 채팅 메시지를 가져오기 전에 초기화
+        this.chatMessages = [];
+        this.currentPage = 0;
+        this.hasMoreMessages = true;
+        
         await this.readChatRoom(roomId);
-        this.fetchChatMessages();
+        await this.fetchChatMessages(0, true); // true 파라미터 추가
       },
   
       async readChatRoom(roomId) {
@@ -181,14 +193,32 @@
         }
       },
   
-      async fetchChatMessages() {
+      async fetchChatMessages(page = 0, isInitialLoad = false) {
         try {
-          const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat/room/detail/${this.selectedRoomId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          });
-          this.chatMessages = response.data.result.content;
+          const response = await axios.get(
+            `${process.env.VUE_APP_API_BASE_URL}/chat/room/detail/${this.selectedRoomId}`,
+            {
+              params: { page, size: 20 },
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
+          );
+          
+          const newMessages = response.data.result.content;
+          
+          if (isInitialLoad) {
+            // 초기 로드시에는 최신 메시지가 아래에 오도록 정렬
+            this.chatMessages = newMessages.reverse();
+          } else if (page === 0) {
+            this.chatMessages = newMessages;
+          } else {
+            this.chatMessages = [...newMessages, ...this.chatMessages];
+          }
+          
+          this.hasMoreMessages = !response.data.result.last;
+          this.currentPage = page;
+          
           this.$nextTick(() => {
-            this.scrollToBottom();
+            if (isInitialLoad || page === 0) this.scrollToBottom();
           });
         } catch (error) {
           console.error("채팅 메시지 조회 실패:", error);
@@ -208,20 +238,35 @@
   
         this.stompClient.connect({ Authorization: `Bearer ${token}` }, (frame) => {
           this.connected = true;
-          console.log("✅ 웹소켓 연결 성공:", frame);
+          console.log(" 웹소켓 연결 성공:", frame);
   
           // 모든 채팅방을 구독
           this.chatRooms.forEach((room) => {
             this.stompClient.subscribe(`/topic/${room.roomId}`, (message) => {
               const receivedMessage = JSON.parse(message.body);
-              console.log("📩 실시간 메시지 수신:", receivedMessage);
+              console.log("실시간 메시지 수신:", receivedMessage);
   
-              if (receivedMessage.roomId === this.selectedRoomId) {
-                this.chatMessages.push(receivedMessage);
-                this.$nextTick(() => this.scrollToBottom());
-              } else {
-                const chatRoom = this.chatRooms.find((r) => r.roomId === receivedMessage.roomId);
-                if (chatRoom) chatRoom.notReadCount += 1;
+              // 채팅방 찾기
+              const chatRoomIndex = this.chatRooms.findIndex((r) => r.roomId === receivedMessage.roomId);
+              if (chatRoomIndex !== -1) {
+                // 현재 채팅방 객체 복사
+                const chatRoom = { ...this.chatRooms[chatRoomIndex] };
+                
+                // 현재 선택된 채팅방이 아닌 경우에만 안 읽은 메시지 수 증가
+                if (receivedMessage.roomId !== this.selectedRoomId) {
+                  chatRoom.notReadCount += 1;
+                }
+  
+                // 채팅방 목록에서 현재 채팅방 제거
+                this.chatRooms.splice(chatRoomIndex, 1);
+                // 채팅방을 맨 앞으로 추가
+                this.chatRooms.unshift(chatRoom);
+  
+                // 현재 선택된 채팅방인 경우 메시지 추가 및 스크롤
+                if (receivedMessage.roomId === this.selectedRoomId) {
+                  this.chatMessages.push(receivedMessage);
+                  this.$nextTick(() => this.scrollToBottom());
+                }
               }
             });
           });
@@ -238,13 +283,6 @@
   
         this.stompClient.send(`/publish/${this.selectedRoomId}`, JSON.stringify(messagePayload), {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
-        });
-  
-        // UI에서도 즉시 반영
-        this.chatMessages.push({
-          message: this.messageText,
-          senderNickName: this.currentUser,
-          sendTime: new Date().toISOString(),
         });
   
         this.messageText = "";
@@ -329,6 +367,29 @@
           console.error("채팅방 생성 실패:", error);
           alert("채팅방 생성에 실패했습니다.");
         }
+      },
+  
+      handleScroll(event) {
+        const element = event.target;
+        if (element.scrollTop <= 100 && !this.isLoading && this.hasMoreMessages) {
+          this.loadMoreMessages();
+        }
+      },
+  
+      async loadMoreMessages() {
+        if (this.isLoading || !this.hasMoreMessages) return;
+        
+        this.isLoading = true;
+        const prevScrollHeight = document.querySelector(".chat-messages").scrollHeight;
+        
+        await this.fetchChatMessages(this.currentPage + 1);
+        
+        this.$nextTick(() => {
+          const newScrollHeight = document.querySelector(".chat-messages").scrollHeight;
+          document.querySelector(".chat-messages").scrollTop = 
+            newScrollHeight - prevScrollHeight;
+          this.isLoading = false;
+        });
       },
     },
     async created() {
@@ -723,5 +784,12 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
+}
+
+.loading-messages {
+  text-align: center;
+  padding: 10px;
+  color: #8e8e8e;
+  font-size: 14px;
 }
 </style>
