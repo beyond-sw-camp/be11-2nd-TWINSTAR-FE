@@ -1,232 +1,727 @@
 <template>
     <div class="chat-container">
-        <!-- 채팅방 헤더 -->
+      <!-- 채팅방 목록 -->
+      <div class="chat-rooms-sidebar">
+        <div class="sidebar-header">
+          <h2>메시지</h2>
+          <button class="new-chat-btn" @click="openNewChatModal">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+        <div class="chat-rooms-list">
+          <div
+            v-for="room in chatRooms"
+            :key="room.roomId"
+            class="chat-room-item"
+            @click="selectRoom(room.roomId)"
+            :class="{ active: room.roomId === selectedRoomId }"
+          >
+            <div class="room-image">
+              <img :src="room.roomImage || '/default-avatar.png'" alt="방 이미지" />
+            </div>
+            <div class="room-info">
+              <div class="room-name">{{ room.roomName }}</div>
+              <div v-if="room.notReadCount > 0" class="unread-count">{{ room.notReadCount }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- 채팅 메인 영역 -->
+      <div class="chat-main" v-if="selectedRoomId">
         <div class="chat-header">
-            <div class="user-info">
-                <div class="profile-image"></div>
-                <div class="username">사용자님</div>
-            </div>
+          <div class="room-info">
+            <img :src="selectedRoomImage || '/default-avatar.png'" alt="방 이미지" />
+            <span>{{ selectedRoomName }}</span>
+          </div>
         </div>
-
-        <!-- 메시지 영역 -->
-        <div class="messages-container" ref="messagesContainer">
-            <div v-for="(message, index) in messages" 
-                 :key="index" 
-                 :class="['message-wrapper', message.isSent ? 'sent-wrapper' : 'received-wrapper']">
-                <div :class="['message-bubble', message.isSent ? 'sent' : 'received']">
-                    {{ message.content }}
-                </div>
-                <div :class="['timestamp', message.isSent ? 'timestamp-sent' : 'timestamp-received']">
-                    {{ message.timestamp }}
-                </div>
+  
+        <div class="chat-messages">
+          <div
+            v-for="(message) in chatMessages"
+            :key="message.messageId"
+            :class="['message', message.senderNickName === currentUser ? 'my-message' : 'other-message']"
+          >
+            <img 
+              v-if="message.senderNickName !== currentUser" 
+              :src="selectedRoomImage || 'https://i.pinimg.com/474x/3b/73/a1/3b73a13983f88f8b84e130bb3fb29e17.jpg'" 
+              class="profile-image" 
+              alt="프로필 이미지"
+            />
+            <div class="message-content">
+              <div v-if="message.senderNickName !== currentUser" class="sender">{{ message.senderNickName }}</div>
+              <div class="text-wrapper">
+                <div class="text">{{ message.message }}</div>
+                <div class="time">{{ formatTime(message.sendTime) }}</div>
+              </div>
             </div>
+          </div>
         </div>
-
-        <!-- 메시지 입력 폼 -->
-        <div class="input-container">
+  
+        <div class="chat-input">
+          <input v-model="messageText" placeholder="메시지를 입력하세요..." @keyup.enter="sendMessage" />
+          <button @click="sendMessage">전송</button>
+        </div>
+      </div>
+  
+      <!-- 새로운 채팅방 생성 모달 -->
+      <div v-if="showNewChatModal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>새로운 채팅방</h3>
+            <button class="close-btn" @click="showNewChatModal = false">&times;</button>
+          </div>
+          
+          <div class="search-box">
             <input 
-                v-model="newMessage" 
-                @keyup.enter="sendMessage"
-                placeholder="메시지 보내기..."
-                class="message-input"
+              v-model="searchKeyword" 
+              placeholder="사용자 검색..."
+              class="search-input"
+              @input="searchUsers"
+            />
+          </div>
+  
+          <div class="users-list">
+            <div 
+              v-for="user in filteredUsers" 
+              :key="user.userId"
+              class="user-item"
+              :class="{ 'selected': selectedUsers.includes(user.userId) }"
+              @click="toggleUserSelection(user)"
             >
+              <div class="user-info">
+                <img :src="user.profileImage || '/default-avatar.png'" alt="프로필 이미지" />
+                <span>{{ user.nickName }}</span>
+              </div>
+              <div class="checkbox">
+                <i v-if="selectedUsers.includes(user.userId)" class="fas fa-check"></i>
+              </div>
+            </div>
+          </div>
+  
+          <div class="modal-footer">
             <button 
-                @click="sendMessage" 
-                class="send-button"
-                :class="{ 'active': newMessage.trim() }"
+              @click="createNewChatRoom" 
+              :disabled="selectedUsers.length === 0"
+              class="create-btn"
             >
-                보내기
+              채팅방 만들기 ({{ selectedUsers.length }}명 선택됨)
             </button>
+          </div>
         </div>
+      </div>
     </div>
-</template>
-
-<script>
-export default {
-    name: 'ChatView',
+  </template>
+  
+  <script>
+  import SockJS from "sockjs-client";
+  import Stomp from "webstomp-client";
+  import axios from "axios";
+  import { jwtDecode } from "jwt-decode";
+  
+  export default {
     data() {
-        return {
-            messages: [
-                {
-                    content: '안녕하세요!',
-                    timestamp: '오후 4:30',
-                    isSent: false
-                },
-                {
-                    content: '네, 반갑습니다!',
-                    timestamp: '오후 4:31',
-                    isSent: true
-                }
-            ],
-            newMessage: ''
-        }
+      return {
+        stompClient: null,
+        connected: false,
+        chatMessages: [],
+        messageText: "",
+        currentUser: "",
+        chatRooms: [],
+        selectedRoomId: null,
+        selectedRoomName: "",
+        selectedRoomImage: "",
+        showNewChatModal: false,
+        usersList: [],
+        selectedUsers: [],
+        searchKeyword: "",
+        searchTimeout: null,
+      };
+    },
+    computed: {
+      filteredUsers() {
+        if (!this.searchKeyword) return this.usersList;
+        const keyword = this.searchKeyword.toLowerCase();
+        return this.usersList.filter(user => 
+          user.nickName.toLowerCase().includes(keyword)
+        );
+      }
     },
     methods: {
-        scrollToBottom() {
-            this.$nextTick(() => {
-                const container = this.$refs.messagesContainer;
-                container.scrollTop = container.scrollHeight;
-            });
-        },
-        sendMessage() {
-            if (!this.newMessage.trim()) return;
-            
-            const now = new Date();
-            const hours = now.getHours();
-            const minutes = now.getMinutes();
-            const ampm = hours >= 12 ? '오후' : '오전';
-            const formattedHours = hours % 12 || 12;
-            
-            this.messages.push({
-                content: this.newMessage,
-                timestamp: `${ampm} ${formattedHours}:${minutes.toString().padStart(2, '0')}`,
-                isSent: true
-            });
-            
-            this.newMessage = '';
-            this.scrollToBottom();
+      async selectRoom(roomId) {
+        this.selectedRoomId = roomId;
+        const selectedRoom = this.chatRooms.find((room) => room.roomId === roomId);
+        if (selectedRoom) {
+          this.selectedRoomName = selectedRoom.roomName;
+          this.selectedRoomImage = selectedRoom.roomImage;
+          selectedRoom.notReadCount = 0;
         }
+        await this.readChatRoom(roomId);
+        this.fetchChatMessages();
+      },
+  
+      async readChatRoom(roomId) {
+        try {
+          await axios.post(`${process.env.VUE_APP_API_BASE_URL}/chat/read/${roomId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+        } catch (error) {
+          console.error("채팅방 읽음 처리 실패:", error);
+        }
+      },
+  
+      async fetchChatRooms() {
+        try {
+          const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat/room/list`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+          this.chatRooms = response.data.result;
+        } catch (error) {
+          console.error("채팅방 목록 조회 실패:", error);
+        }
+      },
+  
+      async fetchChatMessages() {
+        try {
+          const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/chat/room/detail/${this.selectedRoomId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+          this.chatMessages = response.data.result.content;
+          this.$nextTick(() => {
+            this.scrollToBottom();
+          });
+        } catch (error) {
+          console.error("채팅 메시지 조회 실패:", error);
+        }
+      },
+  
+      connectWebSocket() {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+  
+        if (this.stompClient && this.connected) {
+          this.stompClient.disconnect();
+        }
+  
+        const socket = new SockJS(`${process.env.VUE_APP_API_BASE_URL}/connect`);
+        this.stompClient = Stomp.over(socket);
+  
+        this.stompClient.connect({ Authorization: `Bearer ${token}` }, (frame) => {
+          this.connected = true;
+          console.log("✅ 웹소켓 연결 성공:", frame);
+  
+          // 모든 채팅방을 구독
+          this.chatRooms.forEach((room) => {
+            this.stompClient.subscribe(`/topic/${room.roomId}`, (message) => {
+              const receivedMessage = JSON.parse(message.body);
+              console.log("📩 실시간 메시지 수신:", receivedMessage);
+  
+              if (receivedMessage.roomId === this.selectedRoomId) {
+                this.chatMessages.push(receivedMessage);
+                this.$nextTick(() => this.scrollToBottom());
+              } else {
+                const chatRoom = this.chatRooms.find((r) => r.roomId === receivedMessage.roomId);
+                if (chatRoom) chatRoom.notReadCount += 1;
+              }
+            });
+          });
+        });
+      },
+  
+      sendMessage() {
+        if (!this.messageText.trim() || !this.stompClient || !this.connected) return;
+  
+        const messagePayload = {
+          message: this.messageText,
+          senderNickName: this.currentUser,
+        };
+  
+        this.stompClient.send(`/publish/${this.selectedRoomId}`, JSON.stringify(messagePayload), {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        });
+  
+        // UI에서도 즉시 반영
+        this.chatMessages.push({
+          message: this.messageText,
+          senderNickName: this.currentUser,
+          sendTime: new Date().toISOString(),
+        });
+  
+        this.messageText = "";
+        this.$nextTick(() => this.scrollToBottom());
+      },
+  
+      scrollToBottom() {
+        this.$nextTick(() => {
+          const chatMessages = document.querySelector(".chat-messages");
+          if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+      },
+  
+      formatTime(timestamp) {
+        const date = new Date(timestamp);
+        let hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? '오후' : '오전';
+        
+        // 12시간제로 변환
+        hours = hours % 12;
+        hours = hours ? hours : 12; // 0시를 12시로 표시
+        
+        return `${ampm} ${hours}:${minutes}`;
+      },
+  
+      openNewChatModal() {
+        this.showNewChatModal = true;
+        this.selectedUsers = [];
+        this.searchKeyword = "";
+        this.fetchUsers();
+      },
+  
+      async fetchUsers() {
+        try {
+          const response = await axios.get(
+            `${process.env.VUE_APP_API_BASE_URL}/user/list`,
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          );
+          // 현재 사용자를 제외한 사용자 목록을 표시
+          this.usersList = response.data.result.filter(
+            user => user.nickName !== this.currentUser
+          );
+        } catch (error) {
+          console.error("사용자 목록 조회 실패:", error);
+        }
+      },
+  
+      toggleUserSelection(user) {
+        const index = this.selectedUsers.indexOf(user.userId);
+        if (index === -1) {
+          this.selectedUsers.push(user.userId);
+        } else {
+          this.selectedUsers.splice(index, 1);
+        }
+      },
+  
+      searchUsers() {
+        // 디바운스 처리
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+          // 필요한 경우 서버에서 검색 결과를 가져올 수 있습니다
+        }, 300);
+      },
+  
+      async createNewChatRoom() {
+        try {
+          const response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/chat/room`,
+            { 
+              participants: this.selectedUsers,
+            },
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          );
+          
+          await this.fetchChatRooms();
+          this.showNewChatModal = false;
+          
+          const newRoom = response.data.result;
+          this.selectRoom(newRoom.roomId);
+        } catch (error) {
+          console.error("채팅방 생성 실패:", error);
+          alert("채팅방 생성에 실패했습니다.");
+        }
+      },
     },
-    mounted() {
-        this.scrollToBottom();
+    async created() {
+      const token = localStorage.getItem("token");
+      const decodedToken = jwtDecode(token);
+      this.currentUser = decodedToken.nickName;
+  
+      await this.fetchChatRooms();
+      this.connectWebSocket();
     },
-    updated() {
-        this.scrollToBottom();
-    }
-}
-</script>
+    beforeUnmount() {
+      if (this.stompClient && this.connected) {
+        this.stompClient.disconnect();
+      }
+    },
+  };
+  </script>
+  
 
 <style scoped>
 .chat-container {
-    max-width: 600px;
-    margin: 0 auto;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background-color: white;
+  display: flex;
+  height: 100vh;
+  background-color: white;
+  margin-left: 240px; /* 헤더 컴포넌트의 너비만큼 여백 추가 */
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.chat-rooms-sidebar {
+  width: 350px;
+  border-right: 1px solid #dbdbdb;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: fixed;
+  left: 240px; /* 헤더 컴포넌트 너비만큼 이동 */
+  background: white;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.sidebar-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.new-chat-btn {
+  background: none;
+  border: none;
+  color: #0095f6;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.new-chat-btn:hover {
+  color: #00376b;
+}
+
+.chat-rooms-list {
+  overflow-y: auto;
+}
+
+.chat-room-item {
+  display: flex;
+  padding: 15px;
+  cursor: pointer;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.chat-room-item:hover {
+  background-color: #fafafa;
+}
+
+.chat-room-item.active {
+  background-color: #efefef;
+}
+
+.room-image img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-right: 15px;
+  object-fit: cover;  /* 이미지 비율 유지 */
+}
+
+.room-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.unread-count {
+  background-color: #0095f6;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 50%;
+  font-size: 12px;
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 350px; /* 채팅방 목록 너비만큼 여백 추가 */
 }
 
 .chat-header {
-    padding: 16px;
-    border-bottom: 1px solid #dbdbdb;
-    background-color: white;
+  padding: 15px;
+  border-bottom: 1px solid #dbdbdb;
 }
 
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.chat-header .room-info {
+  display: flex;
+  align-items: center;
+}
+
+.chat-header img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.message {
+  margin: 10px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;  /* 이미지와 메시지 사이 간격 */
+}
+
+.my-message {
+  justify-content: flex-end;
 }
 
 .profile-image {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background-color: #dbdbdb;
-}
-
-.username {
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.messages-container {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    background-color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .message-wrapper {
-    margin-bottom: 8px;
-    clear: both;
-    display: flex;
-    flex-direction: column;
-    max-width: 70%;
+  display: flex;
+  flex-direction: column;
 }
 
-.sent-wrapper {
-    float: right;
-    align-items: flex-end;
+.message-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
-.received-wrapper {
-    float: left;
-    align-items: flex-start;
+/* 내 메시지일 때 정렬 방향 조정 */
+.my-message .message-content {
+  align-items: flex-end;
 }
 
-.message-bubble {
-    padding: 12px 16px;
-    border-radius: 22px;
-    font-size: 14px;
-    word-wrap: break-word;
-    margin: 2px;
+/* 메시지와 시간을 감싸는 새로운 컨테이너 */
+.text-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 
-.sent {
-    background-color: #efefef;
+/* 내 메시지일 때 순서 변경 */
+.my-message .text-wrapper {
+  flex-direction: row-reverse;
 }
 
-.received {
-    background-color: #efefef;
-    border: 1px solid #dbdbdb;
+.text {
+  background-color: #efefef;
+  padding: 10px;
+  border-radius: 20px;
+  word-wrap: break-word;
+  max-width: 400px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
-.timestamp {
-    font-size: 11px;
-    color: #8e8e8e;
-    margin: 4px 8px;
+/* 내 메시지 스타일 추가 */
+.my-message .text {
+  background-color: #0095f6;  /* 파란색 배경 */
+  color: white;  /* 텍스트 색상 흰색으로 */
 }
 
-.timestamp-sent {
-    text-align: right;
+.time {
+  font-size: 11px;
+  color: #8e8e8e;
+  white-space: nowrap; /* 시간이 한 줄로 표시되도록 */
+  font-weight: 300;
 }
 
-.timestamp-received {
-    text-align: left;
+.chat-input {
+  padding: 20px;
+  border-top: 1px solid #dbdbdb;
+  display: flex;
 }
 
-.input-container {
-    padding: 16px;
-    border-top: 1px solid #dbdbdb;
-    background-color: white;
-    display: flex;
-    gap: 8px;
+.chat-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #dbdbdb;
+  border-radius: 20px;
+  margin-right: 10px;
 }
 
-.message-input {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid #dbdbdb;
-    border-radius: 22px;
-    outline: none;
-    font-size: 14px;
+.chat-input button {
+  padding: 8px 20px;
+  background-color: #0095f6;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
 }
 
-.message-input:focus {
-    border-color: #a8a8a8;
+.chat-input button:hover {
+  background-color: #0081d6;
 }
 
-.send-button {
-    border: none;
-    background: none;
-    color: #0095f6;
-    font-weight: 600;
-    font-size: 14px;
-    opacity: 0.3;
-    cursor: default;
+.loading {
+  text-align: center;
+  padding: 10px;
+  color: #8e8e8e;
 }
 
-.send-button.active {
-    opacity: 1;
-    cursor: pointer;
+.no-chat-selected {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8e8e8e;
+  font-size: 16px;
 }
 
-/* 모바일 최적화 */
-@media (max-width: 600px) {
-    .chat-container {
-        height: 100vh;
-        max-width: 100%;
-    }
+.sender {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #262626;
 }
-</style>   
+
+.room-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.chat-header .room-info span {
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 0;
+  border-radius: 10px;
+  width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #dbdbdb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #8e8e8e;
+}
+
+.search-box {
+  padding: 10px 20px;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dbdbdb;
+  border-radius: 5px;
+}
+
+.users-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-item:hover {
+  background-color: #fafafa;
+}
+
+.user-item.selected {
+  background-color: #e8f0fe;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-info img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #dbdbdb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0095f6;
+}
+
+.selected .checkbox {
+  background-color: #0095f6;
+  border-color: #0095f6;
+  color: white;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid #dbdbdb;
+}
+
+.create-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #0095f6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.create-btn:disabled {
+  background-color: #b2dffc;
+  cursor: not-allowed;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+</style>

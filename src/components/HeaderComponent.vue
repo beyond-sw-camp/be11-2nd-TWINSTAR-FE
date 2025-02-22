@@ -22,7 +22,7 @@
         <span v-if="!isCollapsed">알림</span>
       </div>
       
-      <div class="nav-item" @click="toggleMessages">
+      <div class="nav-item" @click="viewMessagePage">
         <i class="fas fa-envelope"></i>
         <span v-if="!isCollapsed">메시지</span>
       </div>
@@ -215,7 +215,6 @@ export default {
     closeOtherSidebars(current) {
       if (current !== 'search') this.showSearchBar = false
       if (current !== 'notification') this.showNotification = false
-      if (current !== 'messages') this.showMessages = false
       
       // 다른 사이드바가 모두 닫혔는지 확인
       if (!this.showSearchBar && !this.showNotification && !this.showMessages) {
@@ -231,17 +230,6 @@ export default {
     toggleNotification() {
       this.showNotification = !this.showNotification
       this.isCollapsed = this.showNotification
-    },
-
-    toggleMessages() {
-      this.showMessages = !this.showMessages;
-      this.isCollapsed = this.showMessages;
-      
-      // 다른 사이드바들 닫기
-      if (this.showMessages) {
-        this.showSearchBar = false;
-        this.showNotification = false;
-      }
     },
 
     // 사용자 클릭 처리
@@ -302,6 +290,9 @@ export default {
       } catch (error) {
         console.error('최근 검색어 전체 삭제 실패:', error)
       }
+    },
+    viewMessagePage() {
+      this.$router.push('/chat')
     },
   },
   
