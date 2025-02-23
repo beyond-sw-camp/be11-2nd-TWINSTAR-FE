@@ -20,7 +20,10 @@
               <img :src="room.roomImage || '/default-avatar.png'" alt="방 이미지" />
             </div>
             <div class="room-info">
-              <div class="room-name">{{ room.roomName }}</div>
+              <div class="room-name">
+                <span class="room-title">{{ room.roomName }}</span>
+                <span v-if="room.userCount > 0" class="user-count">{{ room.userCount }}</span>
+              </div>
               <div v-if="room.notReadCount > 0" class="unread-count">{{ room.notReadCount }}</div>
             </div>
           </div>
@@ -33,6 +36,17 @@
           <div class="room-info">
             <img :src="selectedRoomImage || '/default-avatar.png'" alt="방 이미지" />
             <span>{{ selectedRoomName }}</span>
+            <div class="room-menu">
+              <button @click="toggleMenu" class="menu-button">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              <div v-if="showMenu" class="menu-dropdown">
+                <button @click="showParticipants">채팅 참여자</button>
+                <button @click="inviteMembers">초대하기</button>
+                <button @click="showChangeRoomName" v-if="selectedRoom?.isGroupChat === 'Y'">방 제목 변경</button>
+                <button @click="leaveRoom" class="leave-btn">채팅방 나가기</button>
+              </div>
+            </div>
           </div>
         </div>
   
@@ -71,7 +85,7 @@
       <div v-if="showNewChatModal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>새로운 채팅방</h3>
+            <h3>대화상대 선택</h3>
             <button class="close-btn" @click="showNewChatModal = false">&times;</button>
           </div>
           
@@ -87,17 +101,17 @@
           <div class="users-list">
             <div 
               v-for="user in filteredUsers" 
-              :key="user.userId"
+              :key="user.id"
               class="user-item"
-              :class="{ 'selected': selectedUsers.includes(user.userId) }"
+              :class="{ 'selected': selectedUsers.includes(user.id) }"
               @click="toggleUserSelection(user)"
             >
               <div class="user-info">
-                <img :src="user.profileImage || '/default-avatar.png'" alt="프로필 이미지" />
+                <img :src="user.profileImg || '/default-avatar.png'" alt="프로필 이미지" />
                 <span>{{ user.nickName }}</span>
               </div>
               <div class="checkbox">
-                <i v-if="selectedUsers.includes(user.userId)" class="fas fa-check"></i>
+                <i v-if="selectedUsers.includes(user.id)" class="fas fa-check"></i>
               </div>
             </div>
           </div>
@@ -108,8 +122,60 @@
               :disabled="selectedUsers.length === 0"
               class="create-btn"
             >
-              채팅방 만들기 ({{ selectedUsers.length }}명 선택됨)
+              확인 ({{ selectedUsers.length }}명)
             </button>
+          </div>
+        </div>
+      </div>
+  
+      <modal-component
+        v-if="showModal"
+        @close="closeModal"
+        @confirm="handleModalConfirm"
+        :title="modalType === 'create' ? '채팅방 생성' : '채팅방 초대'"
+      >
+        <!-- 모달 내용 -->
+      </modal-component>
+  
+      <!-- 채팅 참여자 모달 -->
+      <div v-if="showParticipantsModal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>채팅 참여자</h3>
+            <button class="close-btn" @click="showParticipantsModal = false">&times;</button>
+          </div>
+          <div class="users-list">
+            <div 
+              v-for="user in roomParticipants" 
+              :key="user.id"
+              class="user-item"
+              @click="goToUserDetail(user.id)"
+            >
+              <div class="user-info">
+                <img :src="user.profileImg || '/default-avatar.png'" alt="프로필 이미지" />
+                <span>{{ user.nickName }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- 방 제목 변경 모달 -->
+      <div v-if="showChangeNameModal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>방 제목 변경</h3>
+            <button class="close-btn" @click="showChangeNameModal = false">&times;</button>
+          </div>
+          <div class="modal-body" style="padding: 20px;">
+            <input 
+              v-model="newRoomName" 
+              placeholder="새로운 방 제목을 입력하세요"
+              class="room-name-input"
+            />
+          </div>
+          <div class="modal-footer">
+            <button @click="changeRoomName" class="create-btn">변경하기</button>
           </div>
         </div>
       </div>
@@ -142,6 +208,14 @@
         currentPage: 0,
         isLoading: false,
         hasMoreMessages: true,
+        showMenu: false,
+        showModal: false,
+        modalType: '', // 'create' 또는 'invite'
+        showParticipantsModal: false,
+        roomParticipants: [],
+        showChangeNameModal: false,
+        newRoomName: "",
+        selectedRoom: null,
       };
     },
     computed: {
@@ -158,6 +232,7 @@
         this.selectedRoomId = roomId;
         const selectedRoom = this.chatRooms.find((room) => room.roomId === roomId);
         if (selectedRoom) {
+          this.selectedRoom = selectedRoom;
           this.selectedRoomName = selectedRoom.roomName;
           this.selectedRoomImage = selectedRoom.roomImage;
           selectedRoom.notReadCount = 0;
@@ -188,6 +263,7 @@
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           });
           this.chatRooms = response.data.result;
+          console.log(this.chatRooms);
         } catch (error) {
           console.error("채팅방 목록 조회 실패:", error);
         }
@@ -310,20 +386,24 @@
       },
   
       openNewChatModal() {
+        this.modalType = 'create';
         this.showNewChatModal = true;
         this.selectedUsers = [];
         this.searchKeyword = "";
-        this.fetchUsers();
+        this.fetchUsersForNewChat();
       },
   
-      async fetchUsers() {
+      async fetchUsersForNewChat() {
         try {
           const response = await axios.get(
             `${process.env.VUE_APP_API_BASE_URL}/user/list`,
-            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
           );
-          // 현재 사용자를 제외한 사용자 목록을 표시
-          this.usersList = response.data.result.filter(
+          
+          // 자신을 제외한 모든 사용자 표시
+          this.usersList = response.data.result.content.filter(
             user => user.nickName !== this.currentUser
           );
         } catch (error) {
@@ -332,9 +412,9 @@
       },
   
       toggleUserSelection(user) {
-        const index = this.selectedUsers.indexOf(user.userId);
+        const index = this.selectedUsers.indexOf(user.id);
         if (index === -1) {
-          this.selectedUsers.push(user.userId);
+          this.selectedUsers.push(user.id);
         } else {
           this.selectedUsers.splice(index, 1);
         }
@@ -349,24 +429,40 @@
       },
   
       async createNewChatRoom() {
-        try {
-          const response = await axios.post(
-            `${process.env.VUE_APP_API_BASE_URL}/chat/room`,
-            { 
-              participants: this.selectedUsers,
-            },
-            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-          );
-          
-          await this.fetchChatRooms();
-          this.showNewChatModal = false;
-          
-          const newRoom = response.data.result;
-          this.selectRoom(newRoom.roomId);
-        } catch (error) {
-          console.error("채팅방 생성 실패:", error);
-          alert("채팅방 생성에 실패했습니다.");
+        if (this.modalType === 'invite') {
+          // 초대 로직 실행
+          await this.inviteToRoom();
+        } else {
+          // 새 채팅방 생성 로직
+          try {
+            const response = await axios.post(
+              `${process.env.VUE_APP_API_BASE_URL}/chat/room/create`,
+              { 
+                idList: this.selectedUsers,
+                chatRoomName: this.generateChatRoomName()
+              },
+              { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+            );
+            console.log(response.data);
+            await this.fetchChatRooms();
+            
+            const newRoom = response.data;
+            this.selectRoom(newRoom.roomId);
+          } catch (error) {
+            console.error("채팅방 생성 실패:", error);
+            alert("채팅방 생성에 실패했습니다.");
+          }
         }
+        this.showNewChatModal = false;
+      },
+  
+      generateChatRoomName() {
+        // 선택된 사용자들의 닉네임으로 채팅방 이름 생성
+        const selectedUserNames = this.selectedUsers.map(userId => {
+          const user = this.usersList.find(u => u.id === userId);
+          return user ? user.nickName : '';
+        });
+        return selectedUserNames.join(', ');
       },
   
       handleScroll(event) {
@@ -390,6 +486,168 @@
             newScrollHeight - prevScrollHeight;
           this.isLoading = false;
         });
+      },
+  
+      toggleMenu() {
+        this.showMenu = !this.showMenu;
+      },
+  
+      async inviteMembers() {
+        this.modalType = 'invite';
+        this.showNewChatModal = true;
+        this.selectedUsers = [];
+        this.searchKeyword = "";
+        await this.fetchUsersForInvite();
+        this.showMenu = false;
+      },
+
+      async leaveRoom() {
+        try {
+          const response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/chat/room/leave/${this.selectedRoomId}`,
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          );
+          console.log(response.data);
+          console.log('${this.selectedRoomId}번 방 나가기 완료');
+          
+          // 채팅방 목록 새로고침
+          await this.fetchChatRooms();
+          
+          // 선택된 채팅방 초기화
+          this.selectedRoomId = null;
+          this.selectedRoomName = "";
+          this.selectedRoomImage = "";
+          this.chatMessages = [];
+          
+        } catch (error) {
+          console.error('방나가기 중 오류 발생:', error);
+        }
+        this.showMenu = false;
+      },
+
+      openCreateModal() {
+        this.modalType = 'create';
+        this.showModal = true;
+      },
+
+      openInviteModal() {
+        this.modalType = 'invite';
+        this.showModal = true;
+      },
+
+      async handleModalConfirm() {
+        if (this.modalType === 'create') {
+          // 기존 채팅방 생성 로직
+          await this.createRoom();
+          this.closeModal();
+        } else if (this.modalType === 'invite') {
+          // 초대 로직
+          await this.inviteToRoom();
+          this.closeModal();
+        }
+      },
+
+      async createRoom() {
+        // 기존 채팅방 생성 로직
+        await this.createNewChatRoom();
+      },
+
+      async inviteToRoom() {
+        try {
+          const response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/chat/room/invite/${this.selectedRoomId}`,this.selectedUsers,
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          );
+        console.log(response.data);
+          console.log('멤버 초대 완료');
+        } catch (error) {
+          console.error('초대 중 오류 발생:', error);
+        }
+      },
+
+      closeModal() {
+        this.showModal = false;
+        this.modalType = '';
+        // 모달 관련 데이터 초기화
+      },
+
+      async fetchUsersForInvite() {
+        try {
+          // 현재 채팅방의 멤버 목록을 먼저 가져옵니다
+          const roomMembersResponse = await axios.get(
+            `${process.env.VUE_APP_API_BASE_URL}/chat/room/users/${this.selectedRoomId}`,
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
+          );
+          const currentRoomMembers = roomMembersResponse.data.result;
+          
+          // 전체 사용자 목록을 가져옵니다
+          const response = await axios.get(
+            `${process.env.VUE_APP_API_BASE_URL}/user/list`,
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
+          );
+          
+          // 현재 채팅방 멤버와 자신을 제외한 사용자만 필터링
+          this.usersList = response.data.result.content.filter(
+            user => 
+              user.nickName !== this.currentUser && 
+              !currentRoomMembers.some(member => member.id === user.id)
+          );
+        } catch (error) {
+          console.error("사용자 목록 조회 실패:", error);
+        }
+      },
+
+      async showParticipants() {
+        try {
+          const response = await axios.get(
+            `${process.env.VUE_APP_API_BASE_URL}/chat/room/users/${this.selectedRoomId}`,
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
+          );
+          this.roomParticipants = response.data.result;
+          this.showParticipantsModal = true;
+          this.showMenu = false;
+        } catch (error) {
+          console.error("참여자 목록 조회 실패:", error);
+        }
+      },
+
+      goToUserDetail(userId) {
+        window.location.href = `http://localhost:8080/user/detail/${userId}`;
+      },
+
+      showChangeRoomName() {
+        this.showChangeNameModal = true;
+        this.showMenu = false;
+        this.newRoomName = this.selectedRoomName;
+      },
+
+      async changeRoomName() {
+        try {
+          const response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/chat/room/name/${this.selectedRoomId}`, 
+            {name: this.newRoomName},
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            }
+          );
+          console.log(response.data);
+          // 채팅방 목록 새로고침
+          await this.fetchChatRooms();
+          
+          // 현재 선택된 방 이름 업데이트
+          this.selectedRoomName = this.newRoomName;
+          
+          this.showChangeNameModal = false;
+        } catch (error) {
+          console.error("방 제목 변경 실패:", error);
+          alert("방 제목 변경에 실패했습니다.");
+        }
       },
     },
     async created() {
@@ -483,15 +741,43 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  margin-right: 15px;
-  object-fit: cover;  /* 이미지 비율 유지 */
+  margin-right: 12px;
+  object-fit: cover;
 }
 
 .room-info {
   flex: 1;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.room-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.room-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* 또는 적절한 값으로 조정 */
+}
+
+.user-count {
+  background-color: #f0f0f0;
+  color: #666;
+  font-size: 0.75rem;
+  font-weight: 400;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 20px;
+  text-align: center;
 }
 
 .unread-count {
@@ -517,13 +803,19 @@
 .chat-header .room-info {
   display: flex;
   align-items: center;
+  gap: 12px; /* 이미지와 텍스트 사이 간격 */
 }
 
-.chat-header img {
-  width: 32px;
-  height: 32px;
+.chat-header .room-info img {
+  width: 40px; /* 이미지 크기 조정 */
+  height: 40px;
   border-radius: 50%;
-  margin-right: 10px;
+  object-fit: cover; /* 이미지 비율 유지 */
+}
+
+.chat-header .room-info span {
+  font-weight: 500;
+  font-size: 1rem;
 }
 
 .chat-messages {
@@ -650,16 +942,6 @@
   font-weight: 500;
   font-size: 0.9rem;
   color: #262626;
-}
-
-.room-name {
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-
-.chat-header .room-info span {
-  font-weight: 500;
-  font-size: 1rem;
 }
 
 .modal-content {
@@ -791,5 +1073,74 @@
   padding: 10px;
   color: #8e8e8e;
   font-size: 14px;
+}
+
+.room-menu {
+  position: relative;
+  margin-left: auto; /* 오른쪽 끝으로 정렬 */
+}
+
+.menu-button {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #666;
+}
+
+.menu-button:hover {
+  color: #333;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  min-width: 150px;
+  z-index: 1000;
+}
+
+.menu-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.menu-dropdown button:hover {
+  background: #f5f5f5;
+}
+
+.menu-dropdown .leave-btn {
+  color: #ff4444;
+}
+
+.menu-dropdown .leave-btn:hover {
+  background: #fff1f1;
+}
+
+.room-name-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dbdbdb;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.user-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-item:hover {
+  background-color: #f5f5f5;
 }
 </style>
