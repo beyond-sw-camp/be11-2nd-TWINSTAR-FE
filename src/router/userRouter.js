@@ -2,6 +2,7 @@ import UserLogin from "@/views/UserLogin.vue"
 import UserCreate from "@/views/UserCreate.vue"
 import UserList from "@/views/UserList.vue"
 import MyProfile from "@/views/MyProfile.vue"
+import OtherUserProfile from "@/views/OtherUserProfile.vue"
 
 export const userRouter = [
     {
@@ -24,6 +25,11 @@ export const userRouter = [
         path: '/user/myprofile',
         name: 'MyProfile',
         component: MyProfile,//로그인 여부 체크
+      },
+      {
+        path: '/user/otheruserprofile/:id',
+        name: 'OtherUserProfile',
+        component: OtherUserProfile,
       }
       
 ]

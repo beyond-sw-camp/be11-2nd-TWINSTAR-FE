@@ -120,11 +120,18 @@
                 </div>
             </div>
         </div>
+
+        <img 
+            :src="defaultProfileImage"
+            @error="handleImageError"
+            alt="프로필 이미지"
+        />
     </div>
 </template>
 
 <script>
 import axios from 'axios';
+import defaultProfileImg from '@/assets/images/default-profile.png'  // @ is an alias to /src
 
 export default {
     name: 'UserManagement',
@@ -139,7 +146,8 @@ export default {
             pageSize: 10,
             showDetailModal: false,
             userDetail: null,
-            searchTimeout: null
+            searchTimeout: null,
+            defaultProfileImage: process.env.BASE_URL + 'images/default-profile.png'
         }
     },
     methods: {
@@ -278,6 +286,10 @@ export default {
         clearSearch() {
             this.searchParams.nickName = '';
             this.loadUsers();
+        },
+        handleImageError(e) {
+            // 이미지 로드 실패시 대체 이미지 사용
+            e.target.src = 'https://via.placeholder.com/150';
         }
     },
     created() {

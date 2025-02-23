@@ -2,13 +2,13 @@
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-image">
-        <img :src="profile.profileImg || '/images/default-profile.png'" alt="프로필 이미지">
+        <img :src="profile.profileImg || '/default-profile.png'" alt="프로필 이미지">
       </div>
       <div class="profile-info">
         <div class="profile-top">
           <h2>{{ profile.nickName }}</h2>
-          <button @click="editProfile" class="edit-button">
-            <i class="fas fa-edit"></i> 프로필 편집
+          <button @click="startChat" class="chat-button">
+            <i class="fas fa-comment"></i> 채팅하기
           </button>
         </div>
         <div class="profile-stats">
@@ -17,24 +17,21 @@
             <span class="label">게시물</span>
           </div>
           <div class="stat">
-            <span class="count">{{ profile.followerCount || 0 }}</span>
+            <span class="count">{{ profile.followerCount }}</span>
             <span class="label">팔로워</span>
           </div>
           <div class="stat">
-            <span class="count">{{ profile.followingCount || 0 }}</span>
+            <span class="count">{{ profile.followingCount }}</span>
             <span class="label">팔로잉</span>
           </div>
         </div>
         <p class="profile-text">{{ profile.profileTxt }}</p>
-        <div class="visibility-info">
-          <span>계정 공개 범위: {{ getVisibilityText(profile.idVisibility) }}</span>
-        </div>
       </div>
     </div>
 
     <div class="posts-grid">
       <div v-for="post in profile.posts" :key="post.id" class="post-item">
-        <img :src="post.imageUrl" :alt="post.content" @click="viewPost(post.id)">
+        <img :src="post.imageUrl" :alt="post.content">
       </div>
     </div>
   </div>
@@ -44,7 +41,7 @@
 import axios from 'axios';
 
 export default {
-  name: 'MyProfile',
+  name: 'UserProfile',
   data() {
     return {
       profile: {
@@ -62,34 +59,27 @@ export default {
   methods: {
     async loadProfile() {
       try {
+        const userId = this.$route.params.userId;
         const response = await axios.get(
-          `${process.env.VUE_APP_API_BASE_URL}/user/myProfile`
+          `${process.env.VUE_APP_API_BASE_URL}/user/detail/${userId}`
         );
         
         if (response.data && response.data.result) {
           this.profile = response.data.result;
         }
       } catch (error) {
-        console.error('프로필 로딩 에러:', error);
-        alert('프로필을 불러오는데 실패했습니다.');
+        if (error.response?.data?.message) {
+          alert(error.response.data.message);
+        } else {
+          alert('프로필을 불러오는데 실패했습니다.');
+        }
+        this.$router.push('/');
       }
     },
     
-    getVisibilityText(visibility) {
-      const visibilityMap = {
-        'ALL': '전체 공개',
-        'FOLLOW': '팔로워만',
-        'ONLYME': '나만 보기'
-      };
-      return visibilityMap[visibility] || '알 수 없음';
-    },
-
-    editProfile() {
-      this.$router.push('/user/edit-profile');
-    },
-
-    viewPost(postId) {
-      this.$router.push(`/post/${postId}`);
+    startChat() {
+      // 채팅 기능 구현
+      this.$router.push(`/chat/${this.profile.id}`);
     }
   },
   created() {
@@ -139,9 +129,9 @@ export default {
   margin: 0;
 }
 
-.edit-button {
-  background-color: #efefef;
-  color: #262626;
+.chat-button {
+  background-color: #0095f6;
+  color: white;
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
@@ -151,8 +141,8 @@ export default {
   gap: 8px;
 }
 
-.edit-button:hover {
-  background-color: #dbdbdb;
+.chat-button:hover {
+  background-color: #0081d6;
 }
 
 .profile-stats {
@@ -172,15 +162,6 @@ export default {
   font-size: 18px;
 }
 
-.profile-text {
-  margin-bottom: 16px;
-}
-
-.visibility-info {
-  color: #8e8e8e;
-  font-size: 14px;
-}
-
 .posts-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -190,16 +171,11 @@ export default {
 .post-item {
   aspect-ratio: 1;
   overflow: hidden;
-  cursor: pointer;
 }
 
 .post-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.post-item:hover img {
-  opacity: 0.9;
 }
 </style>

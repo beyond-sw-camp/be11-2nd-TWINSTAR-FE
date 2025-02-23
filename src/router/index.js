@@ -3,15 +3,22 @@ import { userRouter } from './userRouter';
 import { chatRouter } from './ChatRouter';
 import { adminRouter } from '../admin/router/adminRoutes';
 import { jwtDecode } from 'jwt-decode';
+import UserManagement from '@/admin/views/UserManagement.vue';
 
 const routes = [
     ...userRouter,
     ...chatRouter,
     ...adminRouter,
+    {
+        path: '/admin/users',
+        name: 'UserManagement',
+        component: UserManagement,
+        meta: { requiresAdmin: true }  // 관리자 권한 필요
+    },
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHistory(process.env.BASE_URL),
     routes
 });
 
