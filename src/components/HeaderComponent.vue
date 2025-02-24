@@ -386,7 +386,9 @@ function debounce(fn, delay) {
 .nav-item i {
   font-size: 20px;
   width: 24px;
-  color: #45C7FF;
+  background: linear-gradient(90deg, #4776E6, #8E54E9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .nav-item span {
