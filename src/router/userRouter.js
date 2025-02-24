@@ -1,8 +1,6 @@
 import UserLogin from "@/views/UserLogin.vue"
 import UserCreate from "@/views/UserCreate.vue"
-import UserList from "@/views/UserList.vue"
-import MyProfile from "@/views/MyProfile.vue"
-import OtherUserProfile from "@/views/OtherUserProfile.vue"
+import UserProfile from "@/views/Profile.vue"
 
 export const userRouter = [
     {
@@ -16,21 +14,14 @@ export const userRouter = [
         component: UserCreate
     },
     {
-        path: '/user/list',
-        name: 'UserList',
-        component: UserList,
-        meta: { requiresAuth: true }
-    },
-    {
-        path: '/myprofile',
-        name: 'MyProfile',
-        component: MyProfile,
-        meta: { requiresAuth: true }
-    },
-    {
-        path: '/user/profile/:id',
-        name: 'OtherUserProfile',
-        component: OtherUserProfile,
-        props: true
+        path: '/profile/:id',
+        name: 'UserProfile',
+        component: UserProfile,
+        props: true,
+        meta: { requiresAuth: true },
+        beforeEnter: (to, from, next) => {
+            console.log('프로필 라우트 진입, params:', to.params);
+            next();
+        }
     }
 ]

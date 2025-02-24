@@ -1,44 +1,46 @@
 <template>
   <div class="header-container" :class="{ 'collapsed': isCollapsed }">
-    <div class="logo">
-      <router-link to="/">
-        <img src="/logo.png" alt="Twinstar Logo" />
-      </router-link>
+    <div class="top-section">
+      <div class="logo">
+        <router-link to="/">
+          <img src="/logo.png" alt="Twinstar Logo" />
+        </router-link>
+      </div>
+      
+      <nav class="nav-menu">
+        <router-link to="/" class="nav-item">
+          <i class="fas fa-home"></i>
+          <span v-if="!isCollapsed">홈</span>
+        </router-link>
+        
+        <div class="nav-item" @click="toggleSearch">
+          <i class="fas fa-search"></i>
+          <span v-if="!isCollapsed">검색</span>
+        </div>
+        
+        <div class="nav-item" @click="toggleNotification">
+          <i class="fas fa-bell"></i>
+          <span v-if="!isCollapsed">알림</span>
+        </div>
+        
+        <div class="nav-item" @click="viewMessagePage">
+          <i class="fas fa-envelope"></i>
+          <span v-if="!isCollapsed">메시지</span>
+        </div>
+        
+        <router-link to="/post/create" class="nav-item">
+          <i class="fas fa-image"></i>
+          <span v-if="!isCollapsed">게시물</span>
+        </router-link>
+      </nav>
     </div>
-    
-    <nav class="nav-menu">
-      <router-link to="/" class="nav-item">
-        <i class="fas fa-home"></i>
-        <span v-if="!isCollapsed">홈</span>
-      </router-link>
-      
-      <div class="nav-item" @click="toggleSearch">
-        <i class="fas fa-search"></i>
-        <span v-if="!isCollapsed">검색</span>
-      </div>
-      
-      <div class="nav-item" @click="toggleNotification">
-        <i class="fas fa-bell"></i>
-        <span v-if="!isCollapsed">알림</span>
-      </div>
-      
-      <div class="nav-item" @click="viewMessagePage">
-        <i class="fas fa-envelope"></i>
-        <span v-if="!isCollapsed">메시지</span>
-      </div>
-      
-      <router-link to="/post/create" class="nav-item">
-        <i class="fas fa-image"></i>
-        <span v-if="!isCollapsed">게시물</span>
-      </router-link>
-    </nav>
 
-    <div class="profile-section">
-      <router-link to="/myprofile" class="nav-item">
+    <div class="bottom-section">
+      <div class="nav-item" @click="viewMyProfile">
         <i class="fas fa-user"></i>
-        <span v-if="!isCollapsed">내 프로필</span>
-      </router-link>
-      
+        <span v-if="!isCollapsed">프로필</span>
+      </div>
+
       <div class="dropdown">
         <button class="more-btn nav-item" @click="toggleDropdown">
           <i class="fas fa-bars"></i>
@@ -60,22 +62,87 @@
           </router-link>
           <div class="dropdown-divider"></div>
           <router-link to="/logout" class="dropdown-item" @click="doLogout">
+            <i class="fas fa-sign-out-alt"></i>
             <span>로그아웃</span>
           </router-link>
         </div>
       </div>
     </div>
 
-    <div v-if="showSearchBar" class="search-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
+    <div v-if="isSearchOpen" class="search-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
       <div class="search-header">
-        <h3>검색</h3>
-        <v-text-field
-          v-model="searchQuery"
-          placeholder="검색"
-          prepend-inner-icon="fas fa-search"
-          variant="outlined"
-          density="compact"
-        ></v-text-field>
+        <h3 class="search-title">검색</h3>
+        <div class="search-input-container">
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            @input="handleSearch"
+            placeholder="검색"
+            class="search-input"
+          >
+        </div>
+      </div>
+      
+      <div class="search-results" v-if="searchResults.length > 0">
+        <div 
+          v-for="user in searchResults" 
+          :key="user.id" 
+          class="user-item"
+          @click="selectSearchResult(user)"
+        >
+          <img 
+            :src="user.profileImg || '/images/default-profile.png'" 
+            :alt="user.nickName"
+            class="user-avatar"
+            @error="handleImageError"
+          >
+          <span class="user-nickname">{{ user.nickName }}</span>
+        </div>
+      </div>
+      <div v-else-if="!searchQuery" class="recent-searches">
+        <div class="recent-searches-header">
+          <h4>최근 검색</h4>
+          <button 
+            v-if="recentSearches.length > 0" 
+            @click="clearRecentSearches" 
+            class="clear-button"
+          >
+            모두 지우기
+          </button>
+        </div>
+        <div v-if="recentSearches.length > 0" class="recent-searches-list">
+          <div 
+            v-for="(search, index) in recentSearches" 
+            :key="index" 
+            class="recent-search-item"
+          >
+            <div class="search-item-left" @click="goToUserProfile(search.id)">
+              <img 
+                :src="search.profileImg || '/images/default-profile.png'" 
+                :alt="search.nickName"
+                class="user-avatar"
+                @error="handleImageError"
+              >
+              <div class="search-item-info">
+                <span class="user-nickname">{{ search.nickName }}</span>
+                <span class="search-time">{{ formatSearchTime(search.timestamp) }}</span>
+              </div>
+            </div>
+            <button 
+              @click="removeRecentSearch(index)" 
+              class="remove-button"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div v-else class="no-recent-searches">
+          최근 검색 기록이 없습니다
+        </div>
+      </div>
+      <div v-else-if="searchQuery" class="no-results">
+        검색 결과가 없습니다.
       </div>
     </div>
 
@@ -120,6 +187,7 @@
 <script>
 import { jwtDecode } from 'jwt-decode';
 import ChatView from '@/views/ChatView.vue'
+import axios from 'axios';
 
 export default {
   name: 'HeaderComponent',
@@ -150,16 +218,23 @@ export default {
       isDropdownOpen: false,
       userRole:null,
       isLogin:false,
+      isSearchOpen: false,
+      searchTimeout: null,
+      maxRecentSearches: 20, // 최대 저장 개수
+      userId: null,
+      profileImage: null
     }
   },
   created() {
-        const token = localStorage.getItem("token")
-        if(token) {
-            const payload = jwtDecode(token)
-            this.userRole = payload.role
-            this.isLogin = true
-        }
-      },
+    const token = localStorage.getItem("token")
+    if(token) {
+      const payload = jwtDecode(token)
+      this.userRole = payload.role
+      this.isLogin = true
+      this.userId = payload.sub
+      this.loadProfileImage()
+    }
+  },
   methods: {
     toggleDropdown() {
       this.isDropdownOpen = !this.isDropdownOpen
@@ -168,33 +243,41 @@ export default {
             localStorage.clear()
             window.location.href='/'
         },
-    handleSearch: debounce(async function() {
-      if (!this.searchQuery) {
-        this.searchResults = { users: [], hashtags: [] }
-        return
-      }
-
-      this.isSearching = true
-      try {
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        this.searchResults = {
-          users: [
-            { id: 1, username: '@user1', name: 'User One', avatar: 'https://randomuser.me/api/portraits/men/1.jpg' },
-            { id: 2, username: '@user2', name: 'User Two', avatar: 'https://randomuser.me/api/portraits/women/1.jpg' }
-          ],
-          hashtags: [
-            { id: 1, name: 'coding', posts: 100 },
-            { id: 2, name: 'vue', posts: 200 }
-          ]
+    handleSearch() {
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(async () => {
+        if (this.searchQuery.trim()) {
+          try {
+            const response = await axios.get(
+              `${process.env.VUE_APP_API_BASE_URL}/user/list?size=10&sort=id,desc`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+              }
+            );
+            
+            // 검색어와 일치하는 닉네임만 필터링
+            this.searchResults = response.data.result.content.filter(user => 
+              user.nickName.toLowerCase().includes(this.searchQuery.toLowerCase())
+            );
+          } catch (error) {
+            console.error('사용자 검색 실패:', error);
+          }
+        } else {
+          this.searchResults = [];
         }
-      } catch (error) {
-        console.error('검색 중 오류 발생:', error)
-        this.searchResults = { users: [], hashtags: [] }
-      } finally {
-        this.isSearching = false
-      }
-    }, 300),
+      }, 300);
+    },
+
+    goToUserProfile(userId) {
+      this.$router.push(`/profile/${userId}`);
+      this.isSearchOpen = false;
+    },
+
+    handleImageError(e) {
+      e.target.src = '/images/default-profile.png';
+    },
 
     handleMenuClick(item) {
       if (item.isToggle) {
@@ -223,8 +306,8 @@ export default {
     },
 
     toggleSearch() {
-      this.showSearchBar = !this.showSearchBar
-      this.isCollapsed = this.showSearchBar
+      this.isSearchOpen = !this.isSearchOpen
+      this.isCollapsed = this.isSearchOpen
     },
 
     toggleNotification() {
@@ -294,6 +377,69 @@ export default {
     viewMessagePage() {
       this.$router.push('/chat')
     },
+    selectSearchResult(user) {
+      this.addToRecentSearches({
+        id: user.id,
+        nickName: user.nickName,
+        profileImg: user.profileImg,
+        timestamp: new Date().getTime()
+      });
+      this.goToUserProfile(user.id);
+    },
+    addToRecentSearches(search) {
+      // 이미 존재하는 검색 결과 제거
+      this.recentSearches = this.recentSearches.filter(item => item.id !== search.id);
+      
+      // 새 검색 결과를 배열 앞에 추가
+      this.recentSearches.unshift(search);
+      
+      // 최대 개수 유지
+      if (this.recentSearches.length > this.maxRecentSearches) {
+        this.recentSearches.pop();
+      }
+      
+      // localStorage에 저장
+      localStorage.setItem('recentSearches', JSON.stringify(this.recentSearches));
+    },
+    removeRecentSearch(index) {
+      this.recentSearches.splice(index, 1);
+      localStorage.setItem('recentSearches', JSON.stringify(this.recentSearches));
+    },
+    formatSearchTime(timestamp) {
+      const now = new Date().getTime();
+      const diff = now - timestamp;
+      
+      const minutes = Math.floor(diff / (1000 * 60));
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      
+      if (minutes < 60) return `${minutes}분 전`;
+      if (hours < 24) return `${hours}시간 전`;
+      return `${days}일 전`;
+    },
+    async loadProfileImage() {
+      try {
+        const userId = parseInt(this.userId);
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/user/detail/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        )
+        if (response.data && response.data.result) {
+          this.profileImage = response.data.result.profileImg;
+        }
+      } catch (error) {
+        console.error('프로필 이미지 로드 실패:', error);
+      }
+    },
+    viewMyProfile() {
+      if (this.userId) {
+        this.$router.push(`/profile/${this.userId}`);
+      }
+    }
   },
   
   mounted() {
@@ -314,17 +460,6 @@ export default {
       this.handleSearch.cancel()
     }
   }
-}
-
-// debounce 유틸리티 함수
-function debounce(fn, delay) {
-  let timeoutId
-  const debouncedFn = function(...args) {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => fn.apply(this, args), delay)
-  }
-  debouncedFn.cancel = () => clearTimeout(timeoutId)
-  return debouncedFn
 }
 </script>
 
@@ -347,6 +482,18 @@ function debounce(fn, delay) {
   width: 72px;
 }
 
+.top-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottom-section {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
 .logo {
   padding: 0 16px;
   margin-bottom: 30px;
@@ -357,7 +504,6 @@ function debounce(fn, delay) {
 }
 
 .nav-menu {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -394,12 +540,6 @@ function debounce(fn, delay) {
 .nav-item span {
   font-size: 15px;
   color: #444444;
-}
-
-.profile-section {
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
 }
 
 .more-btn {
@@ -461,9 +601,80 @@ function debounce(fn, delay) {
 }
 
 .search-header {
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 8px 16px 16px;
+  border-bottom: 1px solid #dbdbdb;
   background: white;
+}
+
+.search-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 16px;
+  padding: 12px 8px;
+}
+
+.search-input-container {
+  position: relative;
+  padding: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px;
+  border: 1px solid #dbdbdb;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #efefef;
+}
+
+.search-input:focus {
+  outline: none;
+  background-color: #efefef;
+}
+
+.search-icon {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8e8e8e;
+}
+
+.search-results {
+  padding: 16px;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.user-item:hover {
+  background-color: #f8f9fa;
+}
+
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin-right: 12px;
+  object-fit: cover;
+}
+
+.user-nickname {
+  font-weight: 500;
+  color: #262626;
+}
+
+.no-results {
+  padding: 20px;
+  text-align: center;
+  color: #8e8e8e;
 }
 
 .notification-item {
@@ -472,5 +683,89 @@ function debounce(fn, delay) {
 
 .notification-item:hover {
   background-color: #f8f8f8;
+}
+
+.recent-searches {
+  padding: 16px;
+}
+
+.recent-searches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.recent-searches-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.clear-button {
+  color: #0095f6;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.recent-search-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.search-item-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.search-item-info {
+  display: flex;
+  flex-direction: column;
+  margin-left: 12px;
+}
+
+.search-time {
+  font-size: 12px;
+  color: #8e8e8e;
+}
+
+.remove-button {
+  background: none;
+  border: none;
+  color: #8e8e8e;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.remove-button:hover {
+  color: #262626;
+}
+
+.no-recent-searches {
+  text-align: center;
+  color: #8e8e8e;
+  padding: 20px 0;
+}
+
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  margin-right: 20px;
+}
+
+.profile-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 </style>
