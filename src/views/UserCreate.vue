@@ -1,7 +1,10 @@
 <template>
   <div class="signup-container">
     <div class="signup-box">
-      <h2>회원가입</h2>
+      <div class="logo-area">
+        <h1>TwinStar</h1>
+        <p class="subtitle">회원 정보를 입력해주세요</p>
+    </div>
       <form @submit.prevent="create" class="signup-form">
         <div class="form-group">
           <label>이메일</label>
@@ -76,6 +79,9 @@
         >
           가입하기
         </button>
+        <div class="register-link">
+          이미 계정이 있으신가요? <router-link to="/user/login">로그인</router-link>
+        </div>
       </form>
     </div>
   </div>
@@ -228,20 +234,41 @@ export default {
 
 <style scoped>
 .signup-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f6f8ff;
+  padding: 20px;
 }
 
 .signup-box {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    width: 100%;
-    max-width: 400px;
+  background: white;
+  padding: 50px 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 460px;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-area {
+  text-align: center;
+  margin-bottom: 40px;
+}
+h1 {
+  color: #2d3748;
+  font-size: 2.4rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #4776E6, #8E54E9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.subtitle {
+  color: #718096;
+  font-size: 0.95rem;
 }
 
 h2 {
@@ -285,15 +312,16 @@ input.is-invalid:focus {
 }
 
 .signup-button {
-    width: 100%;
-    padding: 0.8rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    margin-top: 1rem;
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(90deg, #4776E6, #8E54E9);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .signup-button:disabled {
