@@ -4,7 +4,9 @@
   <div v-if="isAdminPage" class="admin-layout">
     <AdminSidebar @sidebar-toggle="handleSidebarToggle" />
     <div class="admin-content" :class="{ 'content-collapsed': isSidebarCollapsed }">
-      <router-view/>
+      <router-view v-slot="{ Component }">
+        <component :is="Component" />
+      </router-view>
     </div>
   </div>
   
@@ -12,7 +14,9 @@
   <template v-else>
     <HeaderComponent v-if="!isLoginPage && !isCreatePage"/> 
     <v-main>
-      <router-view/>
+      <router-view v-slot="{ Component }">
+        <component :is="Component" />
+      </router-view>
     </v-main>
   </template>
 </v-app>

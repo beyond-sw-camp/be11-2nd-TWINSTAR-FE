@@ -15,6 +15,11 @@ axios.interceptors.request.use(
             return config;
         }
         
+        // 중복 체크 API는 인증 헤더 제외
+        if (config.url?.includes('/check-email') || config.url?.includes('/check-nickname')) {
+            return config;
+        }
+        
         const token = localStorage.getItem('token');
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
@@ -66,8 +71,6 @@ axios.interceptors.response.use(
         return Promise.reject(error);
     }
 )
-
-
 
 app.use(vuetify)
 app.use(router)
