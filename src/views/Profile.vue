@@ -207,18 +207,28 @@ export default {
         if (response.data && response.data.result) {
           const result = response.data.result;
           
-          // 이미지 URL 처리
+          // 프로필 이미지 URL 처리
           const profileImg = result.profileImg 
             ? (result.profileImg.startsWith('http') 
               ? result.profileImg 
               : `${process.env.VUE_APP_API_BASE_URL}${result.profileImg}`)
-            : '/images/default-profile.png';  // 기본 이미지 경로 수정
+            : '/images/default-profile.png';
             
+          // 게시물 이미지 URL 처리 추가
+          const posts = result.posts?.map(post => ({
+            ...post,
+            imageUrl: post.imageUrl
+              ? (post.imageUrl.startsWith('http')
+                ? post.imageUrl
+                : `${process.env.VUE_APP_API_BASE_URL}${post.imageUrl}`)
+              : '/images/default-post.png'
+          })) || [];
+          
           this.notFound = false;
           this.profile = {
-            ...this.profile,
             ...result,
-            profileImg
+            profileImg,
+            posts  // 수정된 게시물 배열로 업데이트
           };
           
           if (!this.isMyProfile) {

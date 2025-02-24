@@ -10,27 +10,27 @@
       <nav class="nav-menu">
         <router-link to="/" class="nav-item">
           <i class="fas fa-home"></i>
-          <span v-if="!isCollapsed">홈</span>
+          <span>홈</span>
         </router-link>
         
         <div class="nav-item" @click="toggleSearch">
           <i class="fas fa-search"></i>
-          <span v-if="!isCollapsed">검색</span>
+          <span>검색</span>
         </div>
         
         <div class="nav-item" @click="toggleNotification">
           <i class="fas fa-bell"></i>
-          <span v-if="!isCollapsed">알림</span>
+          <span>알림</span>
         </div>
         
         <div class="nav-item" @click="viewMessagePage">
           <i class="fas fa-envelope"></i>
-          <span v-if="!isCollapsed">메시지</span>
+          <span>메시지</span>
         </div>
         
         <router-link to="/post/create" class="nav-item">
           <i class="fas fa-image"></i>
-          <span v-if="!isCollapsed">게시물</span>
+          <span>게시물</span>
         </router-link>
       </nav>
     </div>
@@ -38,38 +38,21 @@
     <div class="bottom-section">
       <div class="nav-item" @click="viewMyProfile">
         <i class="fas fa-user"></i>
-        <span v-if="!isCollapsed">프로필</span>
+        <span>프로필</span>
       </div>
-
-      <div class="dropdown">
-        <button class="more-btn nav-item" @click="toggleDropdown">
-          <i class="fas fa-bars"></i>
-          <span v-if="!isCollapsed">더 보기</span>
-        </button>
-        
-        <div class="dropdown-menu" v-show="isDropdownOpen">
-          <router-link to="/settings" class="dropdown-item">
-            <i class="fas fa-cog"></i>
-            <span>설정</span>
-          </router-link>
-          <router-link to="/display" class="dropdown-item">
-            <i class="fas fa-moon"></i>
-            <span>모드 전환</span>
-          </router-link>
-          <router-link to="/reports" class="dropdown-item">
-            <i class="fas fa-flag"></i>
-            <span>문제 신고</span>
-          </router-link>
-          <div class="dropdown-divider"></div>
-          <router-link to="/logout" class="dropdown-item" @click="doLogout">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>로그아웃</span>
-          </router-link>
-        </div>
+      
+      <router-link to="/settings" class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span>설정</span>
+      </router-link>
+      
+      <div class="nav-item" @click="logout">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>로그아웃</span>
       </div>
     </div>
 
-    <div v-if="isSearchOpen" class="search-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
+    <div v-if="isSearchOpen" class="search-sidebar">
       <div class="search-header">
         <h3 class="search-title">검색</h3>
         <div class="search-input-container">
@@ -146,7 +129,7 @@
       </div>
     </div>
 
-    <div v-if="showNotification" class="notification-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
+    <div v-if="showNotification" class="notification-sidebar">
       <v-card flat class="h-100">
         <v-card-title class="text-h6 py-4">알림</v-card-title>
         
@@ -173,7 +156,7 @@
       </v-card>
     </div>
 
-    <div v-if="showMessages" class="message-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
+    <div v-if="showMessages" class="message-sidebar">
       <v-card flat class="h-100">
         <v-card-title class="text-h6 py-4">메시지</v-card-title>
         <v-card-text class="px-4">
@@ -307,12 +290,20 @@ export default {
 
     toggleSearch() {
       this.isSearchOpen = !this.isSearchOpen
-      this.isCollapsed = this.isSearchOpen
+      this.showNotification = false
+      this.showMessages = false
     },
 
     toggleNotification() {
       this.showNotification = !this.showNotification
-      this.isCollapsed = this.showNotification
+      this.isSearchOpen = false
+      this.showMessages = false
+    },
+
+    toggleMessages() {
+      this.showMessages = !this.showMessages
+      this.isSearchOpen = false
+      this.showNotification = false
     },
 
     // 사용자 클릭 처리
@@ -593,11 +584,7 @@ export default {
   height: 100vh;
   background: white;
   border-right: 1px solid #e0e0e0;
-  transition: all 0.3s ease;
-}
-
-.collapsed-sidebar {
-  left: 72px;
+  z-index: 999;
 }
 
 .search-header {
