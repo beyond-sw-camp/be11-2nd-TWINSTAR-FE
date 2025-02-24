@@ -2,7 +2,11 @@
   <div class="profile-container">
     <div class="profile-header">
       <div class="profile-image">
-        <img :src="profile.profileImg || '/images/default-profile.png'" alt="프로필 이미지">
+        <img 
+          :src="profile.profileImg || '/images/default-profile.png'" 
+          @error="handleProfileImageError"
+          alt="프로필 이미지"
+        >
       </div>
       <div class="profile-info">
         <div class="profile-top">
@@ -66,6 +70,7 @@ export default {
           `${process.env.VUE_APP_API_BASE_URL}/user/myProfile`
         );
         
+        console.log('프로필 응답 데이터:', response.data);  // 전체 응답 데이터 확인
         if (response.data && response.data.result) {
           this.profile = response.data.result;
         }
@@ -90,6 +95,10 @@ export default {
 
     viewPost(postId) {
       this.$router.push(`/post/${postId}`);
+    },
+
+    handleProfileImageError(e) {
+      e.target.src = '/images/default-profile.png';
     }
   },
   created() {

@@ -34,7 +34,7 @@
     </nav>
 
     <div class="profile-section">
-      <router-link to="user/myProfile" class="nav-item">
+      <router-link to="/myprofile" class="nav-item">
         <i class="fas fa-user"></i>
         <span v-if="!isCollapsed">내 프로필</span>
       </router-link>
