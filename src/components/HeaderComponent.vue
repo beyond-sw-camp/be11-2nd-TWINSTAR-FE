@@ -316,12 +316,6 @@ export default {
       this.showMessages = false
     },
 
-    toggleMessages() {
-      this.showMessages = !this.showMessages
-      this.isSearchOpen = false
-      this.showNotification = false
-    },
-
     // 사용자 클릭 처리
     handleUserClick(user) {
       this.addToRecent(user)
@@ -449,7 +443,6 @@ export default {
     },
     closeAllSidebars() {
       this.showNotification = false;
-      this.showMessages = false;
       this.isSearchOpen = false;
     }
   },
