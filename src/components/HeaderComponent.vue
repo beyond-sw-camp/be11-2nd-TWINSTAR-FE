@@ -1,5 +1,5 @@
 <template>
-  <div class="header-container" :class="{ 'collapsed': isCollapsed }">
+  <div class="header-container">
     <div class="top-section">
       <div class="logo">
         <router-link to="/">
@@ -8,29 +8,29 @@
       </div>
       
       <nav class="nav-menu">
-        <router-link to="/" class="nav-item">
+        <a href="/" class="nav-item">
           <i class="fas fa-home"></i>
-          <span v-if="!isCollapsed">홈</span>
-        </router-link>
+          <span>홈</span>
+        </a>
         
         <div class="nav-item" @click="toggleSearch">
           <i class="fas fa-search"></i>
-          <span v-if="!isCollapsed">검색</span>
+          <span>검색</span>
         </div>
         
         <div class="nav-item" @click="toggleNotification">
           <i class="fas fa-bell"></i>
-          <span v-if="!isCollapsed">알림</span>
+          <span>알림</span>
         </div>
         
         <div class="nav-item" @click="viewMessagePage">
           <i class="fas fa-envelope"></i>
-          <span v-if="!isCollapsed">메시지</span>
+          <span>메시지</span>
         </div>
         
         <router-link to="/post/create" class="nav-item">
           <i class="fas fa-image"></i>
-          <span v-if="!isCollapsed">게시물</span>
+          <span>게시물</span>
         </router-link>
       </nav>
     </div>
@@ -38,13 +38,13 @@
     <div class="bottom-section">
       <div class="nav-item" @click="viewMyProfile">
         <i class="fas fa-user"></i>
-        <span v-if="!isCollapsed">프로필</span>
+        <span>프로필</span>
       </div>
 
       <div class="dropdown">
         <button class="more-btn nav-item" @click="toggleDropdown">
           <i class="fas fa-bars"></i>
-          <span v-if="!isCollapsed">더 보기</span>
+          <span>더 보기</span>
         </button>
         
         <div class="dropdown-menu" v-show="isDropdownOpen">
@@ -69,7 +69,7 @@
       </div>
     </div>
 
-    <div v-if="isSearchOpen" class="search-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
+    <div v-if="isSearchOpen" class="search-sidebar">
       <div class="search-header">
         <h3 class="search-title">검색</h3>
         <div class="search-input-container">
@@ -146,7 +146,7 @@
       </div>
     </div>
 
-    <div v-if="showNotification" class="notification-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
+    <div v-if="showNotification" class="notification-sidebar">
       <v-card flat class="h-100">
         <v-card-title class="text-h6 py-4">알림</v-card-title>
         
@@ -173,7 +173,7 @@
       </v-card>
     </div>
 
-    <div v-if="showMessages" class="message-sidebar" :class="{ 'collapsed-sidebar': isCollapsed }">
+    <div v-if="showMessages" class="message-sidebar">
       <v-card flat class="h-100">
         <v-card-title class="text-h6 py-4">메시지</v-card-title>
         <v-card-text class="px-4">
@@ -196,7 +196,6 @@ export default {
   },
   data() {
     return {
-      isCollapsed: false,
       showSearchBar: false,
       showNotification: false,
       showMessages: false,
@@ -301,18 +300,26 @@ export default {
       
       // 다른 사이드바가 모두 닫혔는지 확인
       if (!this.showSearchBar && !this.showNotification && !this.showMessages) {
-        this.isCollapsed = false
+        this.isSearchOpen = false
       }
     },
 
     toggleSearch() {
       this.isSearchOpen = !this.isSearchOpen
-      this.isCollapsed = this.isSearchOpen
+      this.showNotification = false
+      this.showMessages = false
     },
 
     toggleNotification() {
       this.showNotification = !this.showNotification
-      this.isCollapsed = this.showNotification
+      this.isSearchOpen = false
+      this.showMessages = false
+    },
+
+    toggleMessages() {
+      this.showMessages = !this.showMessages
+      this.isSearchOpen = false
+      this.showNotification = false
     },
 
     // 사용자 클릭 처리
@@ -439,6 +446,11 @@ export default {
       if (this.userId) {
         this.$router.push(`/profile/${this.userId}`);
       }
+    },
+    closeAllSidebars() {
+      this.showNotification = false;
+      this.showMessages = false;
+      this.isSearchOpen = false;
     }
   },
   
@@ -475,11 +487,6 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 20px 0;
-  transition: width 0.3s ease;
-}
-
-.header-container.collapsed {
-  width: 72px;
 }
 
 .top-section {
@@ -516,11 +523,6 @@ export default {
   text-decoration: none;
   gap: 12px;
   cursor: pointer;
-}
-
-.collapsed .nav-item {
-  justify-content: center;
-  padding: 12px;
 }
 
 .nav-item:hover {
@@ -587,17 +589,13 @@ export default {
 
 .search-sidebar, .notification-sidebar, .message-sidebar {
   position: fixed;
-  left: 240px;
+  right: 0;
   width: 400px;
   top: 0;
   height: 100vh;
   background: white;
-  border-right: 1px solid #e0e0e0;
-  transition: all 0.3s ease;
-}
-
-.collapsed-sidebar {
-  left: 72px;
+  border-left: 1px solid #e0e0e0;
+  z-index: 1001;
 }
 
 .search-header {
