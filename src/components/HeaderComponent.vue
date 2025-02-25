@@ -2,7 +2,8 @@
   <div class="header-container" :class="{ 'collapsed': isCollapsed }">
     <div class="logo">
       <router-link to="/">
-        <img src="/logo.png" alt="Twinstar Logo" />
+        <img v-if="!isCollapsed" src="/logo.png" alt="Twinstar Logo" /> 
+        <img v-else src="/logo2.png" alt="Twinstar Logo Small" />
       </router-link>
     </div>
     
@@ -350,10 +351,24 @@ function debounce(fn, delay) {
 .logo {
   padding: 0 16px;
   margin-bottom: 30px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.collapsed .logo {
+  padding: 0;
+  justify-content: center;  /* 가운데 정렬 */
+  margin-left: 4px;  /* 미세 조정 */
+  margin-right: 4px;
 }
 
 .logo img {
   height: 32px;
+}
+
+.collapsed .logo img {
+  height: 40px;
+  padding: 4px;  /* 로고 주변 여백 추가 */
 }
 
 .nav-menu {
@@ -361,6 +376,8 @@ function debounce(fn, delay) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+  font-weight: 600;
 }
 
 .nav-item {
@@ -448,7 +465,7 @@ function debounce(fn, delay) {
 .search-sidebar, .notification-sidebar, .message-sidebar {
   position: fixed;
   left: 240px;
-  width: 400px;
+  width: 300px;
   top: 0;
   height: 100vh;
   background: white;
