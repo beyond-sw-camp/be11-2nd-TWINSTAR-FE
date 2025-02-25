@@ -403,9 +403,9 @@ export default {
 .profile-container {
   min-height: 100vh;
   padding: 20px;
-  margin-left: 240px; /* 사이드바 너비만큼 여백 */
+  margin-left: var(--sidebar-width, 240px);
+  width: calc(100% - var(--sidebar-width, 240px));
   box-sizing: border-box;
-  width: calc(100% - 240px); /* 전체 너비에서 사이드바 너비를 뺀 만큼 차지 */
 }
 
 .profile-content {
@@ -668,6 +668,71 @@ export default {
   .posts-grid {
     gap: 3px;
     padding: 0 3px;
+  }
+}
+
+/* 태블릿 및 모바일 반응형 스타일 */
+@media screen and (max-width: 1024px) {
+  .profile-container {
+    margin-left: 0;
+    width: 100%;
+    padding: 15px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .profile-info {
+    align-items: center;
+  }
+
+  .profile-top {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .profile-stats {
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .posts-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .posts-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .profile-image {
+    width: 100px;
+    height: 100px;
+  }
+
+  .profile-top h2 {
+    font-size: 24px;
+  }
+
+  .profile-stats {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .stat-item {
+    justify-content: center;
+  }
+
+  .modal-content {
+    width: 90%;
+    margin: 10px;
   }
 }
 </style> 

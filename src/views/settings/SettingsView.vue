@@ -161,7 +161,7 @@
 
 <script>
 import axios from 'axios';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 export default {
   name: 'SettingsView',
@@ -379,15 +379,19 @@ export default {
 <style scoped>
 .settings-container {
   display: flex;
-  margin-left: 240px; /* HeaderComponent 너비만큼 여백 */
   min-height: 100vh;
   background-color: white;
+  width: 100%;
 }
 
 .settings-sidebar {
   width: 240px;
   border-right: 1px solid #dbdbdb;
   padding: 20px 0;
+  position: fixed;
+  height: 100vh;
+  background: white;
+  z-index: 10;
 }
 
 .settings-sidebar h2 {
@@ -424,6 +428,7 @@ export default {
 .settings-content {
   flex: 1;
   padding: 40px;
+  margin-left: 240px; /* 사이드바 너비만큼 마진 */
 }
 
 .settings-section {
@@ -585,5 +590,64 @@ export default {
 .save-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* 태블릿 이하 화면 크기 */
+@media (max-width: 992px) {
+  .settings-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid #dbdbdb;
+  }
+
+  .settings-nav {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .settings-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .settings-item {
+    padding: 10px 15px;
+  }
+}
+
+/* 모바일 화면 */
+@media (max-width: 576px) {
+  .settings-container {
+    flex-direction: column;
+  }
+
+  .settings-content {
+    padding: 15px;
+  }
+
+  .profile-photo {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .photo-actions {
+    width: 100%;
+    align-items: center;
+  }
+
+  .form-group {
+    flex-direction: column;
+  }
+
+  .char-count {
+    position: static;
+    text-align: right;
+    margin-top: 5px;
+  }
 }
 </style> 

@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" @click="closeModal">
+  <div class="modal-overlay" @click="handleOverlayClick">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <div class="header-left">
@@ -14,15 +14,7 @@
           <button class="next-button" @click="nextStep" v-if="selectedImage && step === 1">
             다음
           </button>
-          <button 
-            class="share-button" 
-            @click="sharePost" 
-            v-if="step === 2"
-            :disabled="isSubmitting"
-          >
-            {{ isSubmitting ? '공유 중...' : '공유하기' }}
-          </button>
-          <button class="close-button" @click="closeModal" v-if="!selectedImage">
+          <button class="close-button" @click="closeModal" v-if="step === 2 || !selectedImage">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -52,7 +44,22 @@
                 :src="currentImage" 
                 alt="Selected image"
                 :style="imageStyle"
+                @mousedown="startDrag"
+                @mousemove="onDrag"
+                @mouseup="stopDrag"
+                @mouseleave="stopDrag"
+                @touchstart="startDrag"
+                @touchmove="onDrag"
+                @touchend="stopDrag"
+                ref="imageElement"
               >
+              <!-- 삭제 버튼 추가 -->
+              <button class="delete-image-button" @click="deleteCurrentImage">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="12" fill="rgba(0, 0, 0, 0.5)"/>
+                  <path d="M16 8L8 16M8 8l8 8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
               <!-- 이미지 슬라이드 컨트롤 -->
               <button 
                 v-if="currentImageIndex > 0" 
@@ -80,6 +87,17 @@
                   :class="{ active: currentImageIndex === index }"
                 ></span>
               </div>
+              <!-- 3x3 그리드 오버레이 추가 -->
+              <div class="grid-overlay" :class="{ 'show-grid': isDragging }">
+                <div class="grid-lines vertical">
+                  <div class="grid-line"></div>
+                  <div class="grid-line"></div>
+                </div>
+                <div class="grid-lines horizontal">
+                  <div class="grid-line"></div>
+                  <div class="grid-line"></div>
+                </div>
+              </div>
             </div>
             <div class="image-controls">
               <div class="aspect-ratio-menu" v-if="showAspectRatioMenu">
@@ -96,8 +114,29 @@
                   <span>16:9</span>
                 </button>
               </div>
+              <!-- 줌 슬라이더 컨트롤 추가 -->
+              <div class="zoom-control" v-if="isZoomed">
+                <div class="zoom-slider-container">
+                  <input 
+                    type="range" 
+                    class="zoom-slider" 
+                    :min="minScale * 100" 
+                    :max="maxScale * 100" 
+                    :value="scale * 100"
+                    @input="handleZoomSlider"
+                  >
+                </div>
+              </div>
+              <!-- 줌 토글 버튼 -->
+              <button class="control-button" @click="toggleZoom" data-type="zoom">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="11" cy="11" r="7" stroke="white" stroke-width="2"/>
+                  <path d="M16 16l4 4" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M11 8v6M8 11h6" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
               <!-- 비율 조정 로직 -->
-              <button class="control-button" @click="toggleAspectRatioMenu">
+              <button class="control-button" @click="toggleAspectRatioMenu" data-type="aspect-ratio">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M15 3H21V9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M9 21H3V15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -131,7 +170,7 @@
               <textarea
                 class="post-textarea"
                 v-model="caption"
-                placeholder="어서오세요"
+                placeholder="여기에 입력해주세요"
                 rows="8"
               ></textarea>
               <div class="hashtag-input">
@@ -172,20 +211,27 @@
                   </button>
                 </div>
               </div>
+              <button 
+                class="share-button" 
+                @click="sharePost" 
+                :disabled="isSubmitting"
+              >
+                {{ isSubmitting ? '공유 중...' : '공유하기' }}
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 뒤로가기 할 때 확인창 -->
+    <!-- 모달 닫기 확인 대화상자 -->
     <div v-if="showConfirmDialog" class="confirm-dialog-overlay" @click.stop>
       <div class="confirm-dialog">
-        <h4>전으로 돌아가시겠어요?</h4>
-        <p>수정사항은 모두 취소됩니다.</p>
+        <h4>게시물을 삭제하시겠어요?</h4>
+        <p>지금 나가시면 수정내용이 저장되지 않습니다.</p>
         <div class="dialog-buttons">
-          <button class="cancel-button" @click="cancelGoBack">취소</button>
-          <button class="confirm-button" @click="confirmGoBack">확인</button>
+          <button class="cancel-button" @click="cancelClose">취소</button>
+          <button class="confirm-button" @click="confirmClose">삭제</button>
         </div>
       </div>
     </div>
@@ -209,7 +255,7 @@ export default {
       caption: '',
       username: '사용자이름', // 실제 사용자 이름으로 대체
       userProfile: '/default-profile.png', // 실제 프로필 이미지로 대체
-      showConfirmDialog: false, // 확인 대화상자 표시 여부
+      showConfirmDialog: false,
       showAspectRatioMenu: false,
       currentAspectRatio: 'original',
       imageWidth: 0,
@@ -221,6 +267,17 @@ export default {
       hashtag: '',
       hashtags: [],
       isSubmitting: false,
+      isZoomed: false,
+      scale: 1,
+      minScale: 1,
+      maxScale: 2,
+      translateX: 0,
+      translateY: 0,
+      isDragging: false,
+      startX: 0,
+      startY: 0,
+      lastTranslateX: 0,
+      lastTranslateY: 0,
     }
   },
   computed: {
@@ -256,32 +313,14 @@ export default {
       };
     },
     imageStyle() {
-      if (this.currentAspectRatio === 'original') {
-        return {
-          maxWidth: '100%',
-          maxHeight: '100%'
-        };
-      }
-
-      const containerWidth = 600; // 컨테이너 기본 너비
-      const containerHeight = 600; // 컨테이너 기본 높이
-      const containerRatio = containerWidth / containerHeight;
-      const targetRatio = this.aspectRatioValue;
-
-      if (targetRatio > containerRatio) {
-        // 이미지가 더 넓은 경우
-        return {
-          width: '100%',
-          height: 'auto',
-          objectFit: 'cover'
-        };
-      } else {
-        // 이미지가 더 높은 경우
-        return {
-          width: 'auto',
-          height: '100%',
-          objectFit: 'cover'
-        };
+      return {
+        maxWidth: '100%',
+        maxHeight: '100%',
+        transform: `translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`,
+        cursor: this.isZoomed ? (this.isDragging ? 'grabbing' : 'grab') : 'default',
+        transition: this.isDragging ? 'none' : 'transform 0.3s',
+        userSelect: 'none',
+        WebkitUserDrag: 'none'
       }
     },
     currentImage() {
@@ -289,13 +328,39 @@ export default {
     }
   },
   methods: {
+    handleOverlayClick(event) {
+      if (event.target.classList.contains('modal-overlay')) {
+        if (this.selectedImage) {
+          this.showCloseConfirmDialog();
+        } else {
+          this.$emit('close');
+        }
+      }
+    },
     closeModal() {
-      this.$emit('close')
+      if (this.selectedImage) {
+        this.showCloseConfirmDialog();
+      } else {
+        this.$emit('close');
+      }
+    },
+    showCloseConfirmDialog() {
+      this.showConfirmDialog = true;
+    },
+    cancelClose() {
+      this.showConfirmDialog = false;
+    },
+    confirmClose() {
+      this.showConfirmDialog = false;
+      this.$emit('close');
     },
     handleImageSelect(event) {
       const files = event.target.files;
       if (files.length > 0) {
+        this.images = []; // 기존 이미지 배열 초기화
+        this.currentImageIndex = 0; // 현재 이미지 인덱스 초기화
         this.addImagesToArray(files);
+        this.selectedImage = true; // selectedImage를 true로 설정
       }
     },
     handleAdditionalImage(event) {
@@ -314,7 +379,7 @@ export default {
             this.imageHeight = img.height;
             this.images.push(e.target.result);
             if (this.images.length === 1) {
-              this.selectedImage = e.target.result;
+              this.selectedImage = true; // 여기서도 selectedImage를 true로 설정
             }
           };
           img.src = e.target.result;
@@ -390,7 +455,6 @@ export default {
     },
     setAspectRatio(ratio) {
       this.currentAspectRatio = ratio;
-      this.showAspectRatioMenu = false;
     },
     togglePrivacyDropdown() {
       this.showPrivacyDropdown = !this.showPrivacyDropdown;
@@ -404,7 +468,94 @@ export default {
         this.hashtags.push(this.hashtag.trim());
         this.hashtag = '';
       }
-    }
+    },
+    deleteCurrentImage() {
+      // 현재 이미지 삭제
+      this.images.splice(this.currentImageIndex, 1);
+      
+      // 이미지가 모두 삭제된 경우
+      if (this.images.length === 0) {
+        this.selectedImage = null;
+        this.currentImageIndex = 0;
+        return;
+      }
+      
+      // 마지막 이미지였던 경우 인덱스 조정
+      if (this.currentImageIndex >= this.images.length) {
+        this.currentImageIndex = this.images.length - 1;
+      }
+    },
+    toggleZoom() {
+      // 슬라이더 표시/숨김만 토글
+      this.isZoomed = !this.isZoomed;
+      // scale과 translate 값은 유지 (초기화하지 않음)
+    },
+    handleZoomSlider(event) {
+      const value = parseFloat(event.target.value);
+      this.scale = value / 100;
+      
+      // 확대/축소 시 현재 위치가 경계를 벗어나지 않도록 조정
+      const bounds = this.calculateBounds();
+      this.translateX = Math.max(bounds.minX, Math.min(bounds.maxX, this.translateX));
+      this.translateY = Math.max(bounds.minY, Math.min(bounds.maxY, this.translateY));
+      this.lastTranslateX = this.translateX;
+      this.lastTranslateY = this.translateY;
+    },
+    startDrag(e) {
+      if (!this.isZoomed) return; // 확대된 상태에서만 드래그 가능
+      this.isDragging = true;
+      
+      const point = e.touches ? e.touches[0] : e;
+      this.startX = point.clientX - this.lastTranslateX;
+      this.startY = point.clientY - this.lastTranslateY;
+      
+      if (e.target.tagName === 'IMG') {
+        e.preventDefault(); // 이미지 기본 드래그 방지
+      }
+    },
+    onDrag(e) {
+      if (!this.isDragging || !this.isZoomed) return;
+      e.preventDefault();
+      
+      const point = e.touches ? e.touches[0] : e;
+      const newTranslateX = point.clientX - this.startX;
+      const newTranslateY = point.clientY - this.startY;
+      
+      // 이미지 경계 제한 계산
+      const bounds = this.calculateBounds();
+      this.translateX = Math.max(bounds.minX, Math.min(bounds.maxX, newTranslateX));
+      this.translateY = Math.max(bounds.minY, Math.min(bounds.maxY, newTranslateY));
+    },
+    stopDrag() {
+      if (this.isDragging) {
+        this.lastTranslateX = this.translateX;
+        this.lastTranslateY = this.translateY;
+      }
+      this.isDragging = false;
+    },
+    calculateBounds() {
+      if (!this.$refs.imageElement) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+      
+      const img = this.$refs.imageElement;
+      const container = img.parentElement;
+      const imgRect = img.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      const scaledWidth = imgRect.width * this.scale;
+      const scaledHeight = imgRect.height * this.scale;
+      
+      // 이미지가 컨테이너보다 큰 경우에만 드래그 제한
+      const minX = Math.min(0, containerRect.width - scaledWidth);
+      const maxX = 0;
+      const minY = Math.min(0, containerRect.height - scaledHeight);
+      const maxY = 0;
+      
+      return { minX, maxX, minY, maxY };
+    },
+  },
+  mounted() {
+  },
+  beforeUnmount() {
   }
 }
 </script>
@@ -424,14 +575,16 @@ export default {
 }
 
 .modal-content {
+  position: relative;
   background: white;
+  width: 100%;
+  max-width: 600px;
+  height: 90vh;
+  max-height: 630px;
   border-radius: 12px;
-  width: 85%;
-  max-width: 900px;
-  height: auto;
-  min-height: 550px;
-  max-height: 90vh;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -495,6 +648,7 @@ export default {
   align-items: center;
   padding: 24px;
   background: white;
+  margin-top: 60px;
 }
 
 .upload-icon {
@@ -506,7 +660,7 @@ export default {
 .upload-section p {
   color: #262626;
   font-size: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .upload-button {
@@ -517,6 +671,7 @@ export default {
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
+  margin-top: 10px;
 }
 
 .image-preview {
@@ -537,6 +692,15 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: white;
+  overflow: hidden;
+  touch-action: none; /* 모바일에서 기본 터치 동작 방지 */
+}
+
+.image-wrapper img {
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
 }
 
 .image-preview.1\:1 .image-wrapper {
@@ -561,25 +725,25 @@ export default {
 
 .image-controls {
   position: absolute;
-  bottom: 16px;
+  bottom: 45px;
   left: 16px;
   display: flex;
   gap: 12px;
+  z-index: 10;
 }
 
 .control-button {
   background: rgba(0, 0, 0, 0.75);
   border: none;
   color: #fff;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: background-color 0.2s;
 }
 
 .control-button:hover {
@@ -651,6 +815,10 @@ export default {
 .post-options {
   margin-top: 30px;
   padding-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #dbdbdb;
 }
 
 .option-button {
@@ -787,7 +955,7 @@ export default {
 }
 
 .confirm-button {
-  background: #0095f6;
+  background: #ed4956;
   color: white;
 }
 
@@ -796,7 +964,7 @@ export default {
 }
 
 .confirm-button:hover {
-  background: #1877f2;
+  background: #dc3545;
 }
 
 .aspect-ratio-menu {
@@ -965,9 +1133,390 @@ export default {
 }
 
 .share-button {
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  background: #0095f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.share-button:hover {
+  background-color: #1877f2;
+}
+
+.share-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  padding: 8px;
+  cursor: pointer;
+  color: #262626;
+}
+
+.close-button:hover {
+  color: #000;
+}
+
+/* 모바일 반응형 스타일 */
+@media screen and (max-width: 768px) {
+  .post-options {
+    margin-top: 20px;
+    padding-top: 12px;
+  }
+
+  .share-button {
+    padding: 6px 14px;
+    font-size: 14px;
+  }
+
+  .close-button {
+    font-size: 16px;
+    padding: 6px;
+  }
+}
+
+.delete-image-button {
+  position: absolute;
+  top: 20px;
+  right: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.delete-image-button:hover {
+  transform: scale(1.1);
+}
+
+@media screen and (max-width: 768px) {
+  .delete-image-button {
+    top: 18px;
+    right: 10px;
+  }
+  
+  .delete-image-button svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* 반응형 스타일 추가/수정 */
+@media screen and (max-width: 768px) {
+  .modal-content {
+    width: 100%;
+    max-width: 500px;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .modal-header {
+    padding: 8px 12px;
+  }
+
+  .modal-header h3 {
+    font-size: 14px;
+  }
+
+  .image-preview {
+    height: calc(100vh - 120px); /* 헤더와 하단 컨트롤 영역 고려 */
+  }
+
+  .image-wrapper {
+    width: 100%;
+    height: 100%;
+  }
+
+  .image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .image-controls {
+    bottom: 35px;
+    left: 12px;
+    gap: 10px;
+  }
+
+  .control-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .aspect-ratio-menu {
+    bottom: 40px;
+    left: 0;
+    padding: 6px;
+  }
+
+  .ratio-option {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .slide-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .slide-button.prev {
+    left: 8px;
+  }
+
+  .slide-button.next {
+    right: 8px;
+  }
+
+  .upload-section {
+    padding: 16px;
+  }
+
+  .upload-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+  }
+
+  .upload-section p {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .upload-button {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+
+  /* 게시글 작성 영역 반응형 */
+  .post-creation {
+    padding: 12px;
+  }
+
+  .text-box {
+    padding: 8px;
+  }
+
+  .post-textarea {
+    font-size: 14px;
+    min-height: 120px;
+  }
+
+  .hashtag-input input {
+    font-size: 13px;
+  }
+
+  .post-options {
+    margin-top: 20px;
+    padding-top: 12px;
+  }
+}
+
+/* 더 작은 화면을 위한 추가 스타일 */
+@media screen and (max-width: 480px) {
+  .modal-header {
+    padding: 6px 10px;
+  }
+
+  .upload-icon {
+    font-size: 48px;
+  }
+
+  .upload-section p {
+    font-size: 13px;
+  }
+
+  .control-button {
+    width: 24px;
+    height: 24px;
+  }
+
+  .image-controls {
+    bottom: 8px;
+    left: 8px;
+    gap: 6px;
+  }
+}
+
+.control-button[data-type="zoom"] {
+  position: relative;
+}
+
+.control-button[data-type="zoom"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.1);
+  transition: opacity 0.2s;
+}
+
+.control-button[data-type="zoom"]:hover::after {
+  opacity: 1;
+}
+
+@media screen and (max-width: 768px) {
+  .control-button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .control-button svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.zoom-control {
+  position: absolute;
+  right: -65px;
+  top: -25px;
+  transform: none;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.zoom-slider-container {
+  width: 160px;
+  display: flex;
+  align-items: center;
+}
+
+.zoom-slider {
+  width: 100%;
+  height: 2px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.3);
+  outline: none;
+  border-radius: 1px;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.zoom-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.zoom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.zoom-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+@media screen and (max-width: 768px) {
+  .zoom-control {
+    right: -48px;
+    top: -20px;
+    padding: 6px 10px;
+  }
+
+  .zoom-slider-container {
+    width: 120px;
+  }
+}
+
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.grid-overlay.show-grid {
+  opacity: 1;
+}
+
+.grid-lines {
+  position: absolute;
+  inset: 0;
+}
+
+.grid-lines.vertical {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 33.33%;
+}
+
+.grid-lines.horizontal {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 33.33% 0;
+  height: 100%; /* 높이 명시 */
+}
+
+.grid-line {
+  background-color: rgba(255, 255, 255, 0.8); /* 선 투명도 감소 */
+  position: relative;
+}
+
+.grid-lines.vertical .grid-line {
+  width: 1px;
+  height: 100%;
+}
+
+.grid-lines.horizontal .grid-line {
+  width: 100%;
+  height: 1px;
+  position: absolute; /* 위치 고정 */
+}
+
+/* 수평선 위치 지정 */
+.grid-lines.horizontal .grid-line:first-child {
+  top: 33.33%;
+}
+
+.grid-lines.horizontal .grid-line:last-child {
+  top: 66.66%;
+}
+
+/* 그림자 효과 강화 */
+.grid-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+}
+
+@media screen and (max-width: 768px) {
+  .grid-line {
+    background-color: rgba(255, 255, 255, 0.85); /* 모바일에서 더 진하게 */
   }
 }
 </style>

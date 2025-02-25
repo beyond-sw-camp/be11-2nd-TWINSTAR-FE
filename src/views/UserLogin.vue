@@ -144,6 +144,7 @@ export default{
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
   width: 100%;
   max-width: 460px;
+  min-width: 400px;
   position: relative;
   overflow: hidden;
 }
@@ -171,7 +172,7 @@ h1 {
 .form-group {
   position: relative;
   margin-bottom: 20px;
-  padding-top: 20px;
+  padding-top: 30px;
 }
 
 .form-group i:not(.password-toggle) {
@@ -203,6 +204,7 @@ input {
   box-sizing: border-box;
   position: relative;
   z-index: 1;
+  min-height: 48px;
 }
 
 input.error {
@@ -255,6 +257,7 @@ input:focus {
   background: linear-gradient(90deg, #4776E6, #8E54E9);
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 48px;
 }
 
 .login-button:hover {
@@ -306,11 +309,10 @@ input:focus {
 
 .error-message {
   position: absolute;
-  top: 0;
+  top: -5px;
   left: 0;
   color: #e53e3e;
   font-size: 0.8rem;
-  margin-bottom: 5px;
   display: block;
 }
 
