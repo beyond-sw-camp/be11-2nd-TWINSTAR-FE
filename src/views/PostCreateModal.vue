@@ -72,7 +72,7 @@
                   <path stroke="white" stroke-width="2" d="M9 18l6-6-6-6"/>
                 </svg>
               </button>
-              <!-- 이미지 인디케이터 -->
+              <!-- 이미지 수정기능 -->
               <div v-if="images.length > 1" class="image-indicators">
                 <span 
                   v-for="(_, index) in images" 
@@ -96,6 +96,7 @@
                   <span>16:9</span>
                 </button>
               </div>
+              <!-- 비율 조정 로직 -->
               <button class="control-button" @click="toggleAspectRatioMenu">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M15 3H21V9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -104,6 +105,7 @@
                   <path d="M3 21L10 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
+              <!-- 사진 추가 로직 -->
               <button class="control-button" @click="addMoreImages">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="2"/>
@@ -350,18 +352,12 @@ export default {
         this.selectedImage = null;
       }
     },
-    rotateImage() {
-      // 이미지 회전 로직 구현
-    },
-    cropImage() {
-      // 이미지 자르기 로직 구현
-    },
     async sharePost() {
       try {
         this.isSubmitting = true;
 
         const postData = {
-          id: uuidv4(), // 고유 ID 생성
+          id: uuidv4(), 
           images: this.images,
           aspectRatio: this.currentAspectRatio,
           caption: this.caption,
@@ -373,7 +369,7 @@ export default {
           userId: this.store.state.user.id, // 현재 로그인한 사용자 ID
         };
 
-        // Vuex store에 게시물 추가
+        // Vuex store에 게시물 추가 
         await this.store.dispatch('posts/addPost', postData);
 
         // 성공 메시지 표시
@@ -388,12 +384,6 @@ export default {
       } finally {
         this.isSubmitting = false;
       }
-    },
-    toggleAccessibility() {
-      // 접근성 토글 로직
-    },
-    toggleAdvancedSettings() {
-      // 고급 설정 토글 로직
     },
     toggleAspectRatioMenu() {
       this.showAspectRatioMenu = !this.showAspectRatioMenu;
@@ -448,7 +438,7 @@ export default {
   padding: 12px 16px;
   border-bottom: 1px solid #dbdbdb;
   display: grid;
-  grid-template-columns: 1fr auto 1fr; /* 3등분 그리드 */
+  grid-template-columns: 1fr auto 1fr; 
   align-items: center;
 }
 
@@ -634,7 +624,7 @@ export default {
   padding: 0;
   outline: none;
   min-height: 150px;
-  margin-bottom: 12px; /* 해시태그 입력창과의 간격 */
+  margin-bottom: 12px;
 }
 
 .post-textarea::placeholder {
