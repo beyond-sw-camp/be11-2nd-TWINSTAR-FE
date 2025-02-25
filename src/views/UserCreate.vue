@@ -2,74 +2,79 @@
   <div class="signup-container">
     <div class="signup-box">
       <div class="logo-area">
-        <h1>TwinStar</h1>
+        <img src="/logo.png" alt="Twinstar Logo" class="logo-image" style="max-width: 200px;">
         <p class="subtitle">회원 정보를 입력해주세요</p>
     </div>
       <form @submit.prevent="create" class="signup-form">
         <div class="form-group">
-          <label>이메일</label>
-          <input 
-            type="email" 
-            v-model="email" 
-            @input="checkEmailDuplicate"
-            :class="{ 'is-invalid': (!isEmailValid && email) || emailDuplicate }"
-            placeholder="이메일을 입력하세요"
-          >
           <span class="error-message" v-if="!isEmailValid && email">
             올바른 이메일 형식이 아닙니다
           </span>
           <span class="error-message" v-if="emailDuplicate">
             이미 사용 중인 이메일입니다
           </span>
+          <input 
+            type="email" 
+            v-model="email" 
+            @input="checkEmailDuplicate"
+            :class="{ 'error': (!isEmailValid && email) || emailDuplicate }"
+            placeholder="이메일"
+          >
+          <i class="fas fa-envelope"></i>
         </div>
 
         <div class="form-group">
-          <label>비밀번호</label>
-          <input 
-            type="password" 
-            v-model="password"
-            :class="{ 'is-invalid': !isPasswordValid && password }"
-            placeholder="비밀번호를 입력하세요"
-          >
           <span class="error-message" v-if="!isPasswordValid && password">
             비밀번호는 8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다
           </span>
+          <input 
+            :type="passwordVisible ? 'text' : 'password'"
+            v-model="password"
+            :class="{ 'error': !isPasswordValid && password }"
+            placeholder="비밀번호"
+          >
+          <i class="fas fa-lock"></i>
+          <i 
+            :class="passwordVisible ? 'fas fa-eye-slash' : 'fas fa-eye'"
+            class="password-toggle"
+            @click="togglePassword"
+          ></i>
         </div>
 
         <div class="form-group">
-          <label>비밀번호 확인</label>
-          <input 
-            type="password" 
-            v-model="passwordConfirm"
-            :class="{ 'is-invalid': !isPasswordMatch && passwordConfirm }"
-            placeholder="비밀번호를 다시 입력하세요"
-          >
           <span class="error-message" v-if="!isPasswordMatch && passwordConfirm">
             비밀번호가 일치하지 않습니다
           </span>
+          <input 
+            :type="passwordConfirmVisible ? 'text' : 'password'"
+            v-model="passwordConfirm"
+            :class="{ 'error': !isPasswordMatch && passwordConfirm }"
+            placeholder="비밀번호 확인"
+          >
+          <i class="fas fa-lock"></i>
         </div>
 
         <div class="form-group">
-          <label>닉네임</label>
+          <span class="error-message" v-if="nicknameDuplicate">
+            이미 사용 중인 닉네임입니다
+          </span>
           <input 
             type="text" 
             v-model="nickname"
             @input="checkNicknameDuplicate"
-            :class="{ 'is-invalid': nicknameDuplicate }"
-            placeholder="닉네임을 입력하세요"
+            :class="{ 'error': nicknameDuplicate }"
+            placeholder="닉네임"
           >
-          <span class="error-message" v-if="nicknameDuplicate">
-            이미 사용 중인 닉네임입니다
-          </span>
+          <i class="fas fa-user"></i>
         </div>
 
         <div class="form-group">
-          <label>성별</label>
-          <select v-model="sex">
-            <option value="">선택하세요</option>
+          <select v-model="sex" class="select-gender">
+            <option value="">성별 선택</option>
             <option value="MAN">남성</option>
             <option value="WOMAN">여성</option>
           </select>
+          <i class="fas fa-venus-mars"></i>
         </div>
 
         <button 
@@ -101,7 +106,9 @@ export default {
             emailDuplicate: false,
             nicknameDuplicate: false,
             emailCheckTimeout: null,  // 디바운스를 위한 타이머
-            nicknameCheckTimeout: null  // 디바운스를 위한 타이머
+            nicknameCheckTimeout: null,  // 디바운스를 위한 타이머
+            passwordVisible: false,
+            passwordConfirmVisible: false,
         }
     },
     computed: {
@@ -222,7 +229,13 @@ export default {
                     alert('회원가입 중 오류가 발생했습니다.');
                 }
             }
-        }
+        },
+        togglePassword() {
+            this.passwordVisible = !this.passwordVisible;
+        },
+        togglePasswordConfirm() {
+            this.passwordConfirmVisible = !this.passwordConfirmVisible;
+        },
     },
     // 컴포넌트가 제거될 때 타이머 정리
     beforeUnmount() {
@@ -244,7 +257,7 @@ export default {
 
 .signup-box {
   background: white;
-  padding: 50px 40px;
+  padding: 30px 40px;
   border-radius: 20px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
   width: 100%;
@@ -255,8 +268,18 @@ export default {
 
 .logo-area {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 }
+
+.logo-image {
+  width: 200px !important;
+  height: auto !important;
+  max-width: 200px !important;
+  display: block;
+  margin: 0 auto 10px;
+  object-fit: contain;
+}
+
 h1 {
   color: #2d3748;
   font-size: 2.4rem;
@@ -278,37 +301,110 @@ h2 {
 }
 
 .form-group {
-    margin-bottom: 1rem;
+    position: relative;
+    margin-bottom: 10px;
+    padding-top: 12px;
 }
 
-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #666;
+.form-group i:not(.password-toggle) {
+    position: absolute;
+    left: 15px;
+    top: calc(50% + 10px);
+    transform: translateY(-50%);
+    color: #a0aec0;
+    pointer-events: none;
+    width: 20px;
+    text-align: center;
+    z-index: 2;
+    font-size: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 input, select {
     width: 100%;
-    padding: 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 15px 20px 15px 45px !important;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
     font-size: 1rem;
+    line-height: normal;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1;
 }
 
-input.is-invalid {
-    border-color: #dc3545;
-    background-color: #fff;
+input.error {
+    border-color: #e53e3e;
+    background-color: #fff5f5;
 }
 
-input.is-invalid:focus {
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+input:focus, select:focus {
+    outline: none;
+    border-color: #4776E6;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(71, 118, 230, 0.1);
+}
+
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    top: calc(50% + 10px);
+    transform: translateY(-50%);
+    color: #a0aec0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    z-index: 1;
+    width: 20px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-toggle:hover {
+    color: #4776E6;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 25px;
+  color: #718096;
+  font-size: 0.95rem;
+}
+
+.register-link a {
+  color: #4776E6;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+.register-link a:hover {
+  color: #8E54E9;
 }
 
 .error-message {
-    color: #dc3545;
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #e53e3e;
     font-size: 0.8rem;
-    margin-top: 0.25rem;
+    margin-bottom: 5px;
     display: block;
+}
+
+.select-gender {
+    padding-right: 30px !important;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0aec0' d='M6 8.825L1.175 4 2.238 2.938 6 6.7l3.763-3.763L10.825 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
 }
 
 .signup-button {
@@ -322,6 +418,7 @@ input.is-invalid:focus {
   background: linear-gradient(90deg, #4776E6, #8E54E9);
   cursor: pointer;
   transition: all 0.3s ease;
+  margin-top: 30px;
 }
 
 .signup-button:disabled {
