@@ -1,5 +1,5 @@
 <template>
-  <div class="header-container" :class="{ 'collapsed': isCollapsed }">
+  <div class="header-container">
     <div class="top-section">
       <div class="logo">
         <router-link to="/">
@@ -8,10 +8,10 @@
       </div>
       
       <nav class="nav-menu">
-        <router-link to="/" class="nav-item">
+        <a href="/" class="nav-item">
           <i class="fas fa-home"></i>
           <span>홈</span>
-        </router-link>
+        </a>
         
         <div class="nav-item" @click="toggleSearch">
           <i class="fas fa-search"></i>
@@ -40,15 +40,32 @@
         <i class="fas fa-user"></i>
         <span>프로필</span>
       </div>
-      
-      <router-link to="/settings" class="nav-item">
-        <i class="fas fa-cog"></i>
-        <span>설정</span>
-      </router-link>
-      
-      <div class="nav-item" @click="logout">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>로그아웃</span>
+
+      <div class="dropdown">
+        <button class="more-btn nav-item" @click="toggleDropdown">
+          <i class="fas fa-bars"></i>
+          <span>더 보기</span>
+        </button>
+        
+        <div class="dropdown-menu" v-show="isDropdownOpen">
+          <router-link to="/settings" class="dropdown-item">
+            <i class="fas fa-cog"></i>
+            <span>설정</span>
+          </router-link>
+          <router-link to="/display" class="dropdown-item">
+            <i class="fas fa-moon"></i>
+            <span>모드 전환</span>
+          </router-link>
+          <router-link to="/reports" class="dropdown-item">
+            <i class="fas fa-flag"></i>
+            <span>문제 신고</span>
+          </router-link>
+          <div class="dropdown-divider"></div>
+          <router-link to="/logout" class="dropdown-item" @click="doLogout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>로그아웃</span>
+          </router-link>
+        </div>
       </div>
     </div>
 
@@ -179,7 +196,6 @@ export default {
   },
   data() {
     return {
-      isCollapsed: false,
       showSearchBar: false,
       showNotification: false,
       showMessages: false,
@@ -284,7 +300,7 @@ export default {
       
       // 다른 사이드바가 모두 닫혔는지 확인
       if (!this.showSearchBar && !this.showNotification && !this.showMessages) {
-        this.isCollapsed = false
+        this.isSearchOpen = false
       }
     },
 
@@ -430,6 +446,11 @@ export default {
       if (this.userId) {
         this.$router.push(`/profile/${this.userId}`);
       }
+    },
+    closeAllSidebars() {
+      this.showNotification = false;
+      this.showMessages = false;
+      this.isSearchOpen = false;
     }
   },
   
@@ -466,11 +487,6 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 20px 0;
-  transition: width 0.3s ease;
-}
-
-.header-container.collapsed {
-  width: 72px;
 }
 
 .top-section {
@@ -523,11 +539,6 @@ export default {
   text-decoration: none;
   gap: 12px;
   cursor: pointer;
-}
-
-.collapsed .nav-item {
-  justify-content: center;
-  padding: 12px;
 }
 
 .nav-item:hover {
@@ -594,13 +605,13 @@ export default {
 
 .search-sidebar, .notification-sidebar, .message-sidebar {
   position: fixed;
-  left: 240px;
-  width: 300px;
+  right: 0;
+  width: 400px;
   top: 0;
   height: 100vh;
   background: white;
-  border-right: 1px solid #e0e0e0;
-  z-index: 999;
+  border-left: 1px solid #e0e0e0;
+  z-index: 1001;
 }
 
 .search-header {

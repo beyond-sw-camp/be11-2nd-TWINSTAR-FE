@@ -685,6 +685,7 @@
   position: fixed;
   left: 240px; /* 헤더 컴포넌트 너비만큼 이동 */
   background: white;
+  z-index: 999; /* 오버레이(1000)보다 낮게 설정 */
 }
 
 .sidebar-header {
