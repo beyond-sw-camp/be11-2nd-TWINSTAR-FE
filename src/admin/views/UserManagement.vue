@@ -144,15 +144,27 @@ export default {
     },
     methods: {
         formatDateTime(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            return new Intl.DateTimeFormat('ko-KR', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            }).format(date);
+            if (!dateString) return '-';
+            
+            try {
+                const date = new Date(dateString);
+                // 유효한 날짜인지 확인
+                if (isNaN(date.getTime())) {
+                    return '-';
+                }
+                
+                return new Intl.DateTimeFormat('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false // 24시간 형식 사용
+                }).format(date);
+            } catch (error) {
+                console.error('날짜 형식 변환 오류:', error);
+                return '-';
+            }
         },
         async loadUsers() {
             try {

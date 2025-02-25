@@ -13,7 +13,7 @@
   <!-- 일반 페이지 레이아웃 -->
   <template v-else>
     <HeaderComponent v-if="!isLoginPage && !isCreatePage"/> 
-    <v-main>
+    <v-main class="main-content">
       <router-view v-slot="{ Component }">
         <component :is="Component" />
       </router-view>
@@ -81,13 +81,22 @@ export default {
 }
 </style>
 
-<!-- <style>
+<style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
 }
-</style> -->
+
+/* v-main의 기본 padding 제거 */
+.main-content {
+  padding-top: 0 !important;
+}
+
+/* HeaderComponent가 있을 때만 여백 추가 */
+.v-main:has(+ .header-component) {
+  padding-top: 60px !important;
+}
+</style>

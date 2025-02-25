@@ -11,12 +11,11 @@ const app = createApp(App)
 axios.interceptors.request.use(
     config => {
         // 로그인과 회원가입 요청은 인터셉터 제외
-        if (config.url?.includes('/member/login') || config.url?.includes('/member/signup')) {
-            return config;
-        }
-        
-        // 중복 체크 API는 인증 헤더 제외
-        if (config.url?.includes('/check-email') || config.url?.includes('/check-nickname')) {
+        if (config.url?.includes('/user/login') || 
+            config.url?.includes('/user/create') || 
+            config.url?.includes('/user/doLogin') || 
+            config.url?.includes('/check-email') || 
+            config.url?.includes('/check-nickname')) {
             return config;
         }
         

@@ -1,14 +1,18 @@
 import {createRouter, createWebHistory} from 'vue-router';
 import { userRouter } from './userRouter';
 import { chatRouter } from './ChatRouter';
+import { postRouter } from './PostRouter';
 import { adminRouter } from '../admin/router/adminRoutes';
 import { jwtDecode } from 'jwt-decode';
 import UserManagement from '@/admin/views/UserManagement.vue';
+import { settingsRouter } from './settingsRouter';
 
 const routes = [
     ...userRouter,
     ...chatRouter,
     ...adminRouter,
+    ...settingsRouter,
+    ...postRouter,
     {
         path: '/admin/users',
         name: 'UserManagement',
