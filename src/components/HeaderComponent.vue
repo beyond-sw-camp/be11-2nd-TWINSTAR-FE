@@ -28,10 +28,10 @@
           <span>메시지</span>
         </div>
         
-        <router-link to="/post/create" class="nav-item">
+        <div class="nav-item" @click="openPostModal">
           <i class="fas fa-image"></i>
           <span>게시물</span>
-        </router-link>
+        </div>
       </nav>
     </div>
 
@@ -182,17 +182,24 @@
       </v-card>
     </div>
   </div>
+
+  <PostCreateModal 
+    v-if="showPostModal" 
+    @close="closePostModal"
+  />
 </template>
 
 <script>
 import { jwtDecode } from 'jwt-decode';
 import ChatView from '@/views/ChatView.vue'
 import axios from 'axios';
+import PostCreateModal from '@/views/PostCreateModal.vue'
 
 export default {
   name: 'HeaderComponent',
   components: {
-    ChatView
+    ChatView,
+    PostCreateModal,
   },
   data() {
     return {
@@ -221,7 +228,8 @@ export default {
       searchTimeout: null,
       maxRecentSearches: 20, // 최대 저장 개수
       userId: null,
-      profileImage: null
+      profileImage: null,
+      showPostModal: false,
     }
   },
   created() {
@@ -444,7 +452,13 @@ export default {
     closeAllSidebars() {
       this.showNotification = false;
       this.isSearchOpen = false;
-    }
+    },
+    openPostModal() {
+      this.showPostModal = true;
+    },
+    closePostModal() {
+      this.showPostModal = false;
+    },
   },
   
   mounted() {

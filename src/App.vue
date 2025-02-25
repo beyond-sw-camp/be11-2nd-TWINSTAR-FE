@@ -12,7 +12,7 @@
   
   <!-- 일반 페이지 레이아웃 -->
   <template v-else>
-    <HeaderComponent v-if="!isLoginPage && !isCreatePage"/> 
+    <HeaderComponent v-if="!isAuthPage" :class="{ 'header-high-priority': !isAuthPage }" />
     <v-main class="main-content">
       <router-view v-slot="{ Component }">
         <component :is="Component" />
@@ -37,11 +37,8 @@ export default {
     }
   },
   computed: {
-    isLoginPage() {
-      return this.$route.path === "/user/login";
-    },
-    isCreatePage(){
-      return this.$route.path === "/user/create";
+    isAuthPage() {
+      return ['/login', '/signup', '/register'].includes(this.$route.path)
     },
     isAdminPage() {
       return this.$route.path.startsWith('/admin');
@@ -83,11 +80,48 @@ export default {
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+
+.view-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin-left: v-bind('isAuthPage ? "0" : "240px"');
+  transition: margin-left 0.3s ease;
+}
+
+/* 헤더가 축소되었을 때 view-container 마진 조정 */
+.header-collapsed .view-container {
+  margin-left: 72px;
+}
+
+/* 인증 페이지일 때는 최상위 z-index */
+.auth-page {
+  z-index: 9999;
+  position: relative;
+}
+
+/* 일반 페이지에서는 헤더가 최상위 */
+.header-high-priority {
+  z-index: 9999 !important;
+}
+
+/* 인증 페이지에서는 헤더가 낮은 우선순위 */
+.auth-page ~ header {
+  z-index: 1 !important;
+}
+
+/* 모달과 사이드바를 위한 전역 스타일 */
+.modal-overlay {
+  z-index: 10000;
+}
+
+.search-sidebar,
+.notification-sidebar {
+  z-index: 9998;
 }
 
 /* v-main의 기본 padding 제거 */
