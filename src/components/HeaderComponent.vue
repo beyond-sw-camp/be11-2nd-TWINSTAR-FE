@@ -194,6 +194,7 @@ import { jwtDecode } from 'jwt-decode';
 import ChatView from '@/views/ChatView.vue'
 import axios from 'axios';
 import PostCreateModal from '@/views/PostCreateModal.vue'
+import { EventSourcePolyfill } from 'event-source-polyfill';
 
 export default {
   name: 'HeaderComponent',
@@ -240,6 +241,8 @@ export default {
       this.isLogin = true
       this.userId = payload.sub
       this.loadProfileImage()
+      this.sseConnect()
+      this.requestNotificationPermission();
     }
   },
   methods: {
@@ -458,6 +461,36 @@ export default {
     },
     closePostModal() {
       this.showPostModal = false;
+    },
+    sseConnect() {
+      const token = localStorage.getItem("token")
+      const options = {
+            heartbeatTimeout: 600000,  // 600초 동안 이벤트가 없으면 연결을 재시도
+            headers: {Authorization: `Bearer ${token}`}  // 쿠키와 인증 정보도 포함
+      };
+      let sse = new EventSourcePolyfill(`${process.env.VUE_APP_API_BASE_URL}/alarm/subscribe`, options)
+      sse.addEventListener('connect', (event) => {
+        console.log(event.data)
+      })
+      sse.addEventListener('alarm', (event) => {
+        console.log(event.data)
+        if (Notification.permission === "granted") {
+          const data = JSON.parse(event.data);
+          new Notification("새 알림", {
+            body: data.content, // 서버에서 받은 메시지
+            icon: "https://twinstar.s3.ap-northeast-2.amazonaws.com/twinstarOnlyLog.png",
+          }).onclick = () => {
+            window.location.href = data.url;
+          }
+        }
+      })
+    },
+    requestNotificationPermission() {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then((permission) => {
+          console.log("알림 권한:", permission);
+        });
+      }
     },
   },
   
