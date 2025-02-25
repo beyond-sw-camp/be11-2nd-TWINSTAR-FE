@@ -401,13 +401,17 @@ export default {
 
 <style scoped>
 .profile-container {
-  max-width: 935px;
-  margin: 0 auto;
-  padding: 30px 20px;
   min-height: 100vh;
-  background-color: white;
-  display: flex;
-  flex-direction: column;
+  padding: 20px;
+  margin-left: 240px; /* 사이드바 너비만큼 여백 */
+  box-sizing: border-box;
+  width: calc(100% - 240px); /* 전체 너비에서 사이드바 너비를 뺀 만큼 차지 */
+}
+
+.profile-content {
+  max-width: 935px; /* 인스타그램 스타일의 최대 너비 */
+  margin: 0 auto; /* 중앙 정렬 */
+  padding: 0 20px;
 }
 
 .profile-header {
@@ -512,14 +516,19 @@ export default {
 
 .posts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(3, 1fr); /* 3개의 동일한 크기 컬럼 */
   gap: 28px;
-  padding: 20px 0;
+  margin-top: 40px;
+  width: 100%;
+  max-width: 935px; /* 최대 너비 설정 */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .post-item {
+  aspect-ratio: 1; /* 정사각형 유지 */
+  width: 100%;
   position: relative;
-  aspect-ratio: 1;
 }
 
 .post-item img {
@@ -644,5 +653,21 @@ export default {
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* 태블릿 크기에서의 조정 */
+@media (max-width: 935px) {
+  .posts-grid {
+    gap: 15px;
+    padding: 0 15px;
+  }
+}
+
+/* 모바일 크기에서의 조정 */
+@media (max-width: 735px) {
+  .posts-grid {
+    gap: 3px;
+    padding: 0 3px;
+  }
 }
 </style> 
