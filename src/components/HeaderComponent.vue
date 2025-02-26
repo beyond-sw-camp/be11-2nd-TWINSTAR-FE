@@ -32,40 +32,22 @@
           <i class="fas fa-image"></i>
           <span>게시물</span>
         </div>
+
+        <div class="nav-item" @click="viewMyProfile">
+          <i class="fas fa-user"></i>
+          <span>프로필</span>
+        </div>
       </nav>
     </div>
 
     <div class="bottom-section">
-      <div class="nav-item" @click="viewMyProfile">
-        <i class="fas fa-user"></i>
-        <span>프로필</span>
+      <div class="nav-item" @click="$router.push('/settings')">
+        <i class="fas fa-cog"></i>
+        <span>설정</span>
       </div>
-
-      <div class="dropdown">
-        <button class="more-btn nav-item" @click="toggleDropdown">
-          <i class="fas fa-bars"></i>
-          <span>더 보기</span>
-        </button>
-        
-        <div class="dropdown-menu" v-show="isDropdownOpen">
-          <router-link to="/settings" class="dropdown-item">
-            <i class="fas fa-cog"></i>
-            <span>설정</span>
-          </router-link>
-          <router-link to="/display" class="dropdown-item">
-            <i class="fas fa-moon"></i>
-            <span>모드 전환</span>
-          </router-link>
-          <router-link to="/reports" class="dropdown-item">
-            <i class="fas fa-flag"></i>
-            <span>문제 신고</span>
-          </router-link>
-          <div class="dropdown-divider"></div>
-          <router-link to="/logout" class="dropdown-item" @click="doLogout">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>로그아웃</span>
-          </router-link>
-        </div>
+      <div class="nav-item" @click="doLogout">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>로그아웃</span>
       </div>
     </div>
 
