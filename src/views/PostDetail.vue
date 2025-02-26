@@ -321,9 +321,9 @@ export default {
           }
         )
         if (response.data.status_code === 200) {
-          // 댓글 추가 후 댓글 목록 새로고침
           this.newComment = ''
-          // 필요한 경우 댓글 목록 새로고침 로직 추가
+          // 댓글 목록 새로고침
+          await this.fetchPostDetail()
         }
       } catch (error) {
         console.error('댓글 작성 실패:', error)
@@ -347,8 +347,8 @@ export default {
         const response = await axios.post(
           `${process.env.VUE_APP_API_BASE_URL}/comment/reply`,
           {
-            parentId: comment.id,
-            content: comment.replyContent
+            content: comment.replyContent,
+            parentId: comment.id
           },
           {
             headers: {
@@ -356,12 +356,13 @@ export default {
             }
           }
         );
-        console.log(response.data)
         
         if (response.data.status_code === 200) {
           comment.replyContent = '';
           comment.showReplyInput = false;
-          // 필요한 경우 댓글 목록 새로고침 로직 추가
+          comment.showReplies = true;
+          // 댓글 목록 새로고침
+          await this.fetchPostDetail();
         }
       } catch (error) {
         console.error('답글 작성 실패:', error);
@@ -411,6 +412,27 @@ export default {
         }
       } catch (error) {
         console.error('댓글 삭제 실패:', error);
+      }
+    },
+    async fetchPostDetail() {
+      try {
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post/detail/${this.$route.params.postId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        )
+        
+        let cleanedHashTags = response.data.result.hashTag.map(tag => {
+          return tag.replace(/[[\]"\\s]/g, '');
+        }).filter(tag => tag !== '');
+        
+        response.data.result.hashTag = cleanedHashTags;
+        this.post = response.data.result
+      } catch (error) {
+        console.error('게시물 로드 실패:', error)
       }
     }
   }
