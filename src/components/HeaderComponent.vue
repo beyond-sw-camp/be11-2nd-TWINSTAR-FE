@@ -3,7 +3,7 @@
     <div class="top-section">
       <div class="logo">
         <router-link to="/">
-          <img src="/logo.png" alt="Twinstar Logo" />
+          <img src="/logo2.png" alt="Twinstar Logo" />
         </router-link>
       </div>
       
@@ -153,20 +153,18 @@
         <v-card-text class="px-4">
           <v-list>
             <v-list-item
-              v-for="(notification, index) in [
-                { avatar: 'https://randomuser.me/api/portraits/men/1.jpg', text: '회원님의 게시물을 좋아합니다.', time: '1시간 전' },
-                { avatar: 'https://randomuser.me/api/portraits/women/1.jpg', text: '회원님을 팔로우하기 시작했습니다.', time: '2시간 전' }
-              ]"
-              :key="index"
+              v-for="notification in notifications"
+              :key="notification.id"
               class="notification-item mb-2"
+              @click="handleNotificationClick(notification)"
             >
               <template v-slot:prepend>
                 <v-avatar size="40">
-                  <v-img :src="notification.avatar" />
+                  <v-img :src="notification.senderProfileImg || '/images/default-profile.png'" />
                 </v-avatar>
               </template>
-              <v-list-item-title class="text-body-2">{{ notification.text }}</v-list-item-title>
-              <v-list-item-subtitle class="text-caption">{{ notification.time }}</v-list-item-subtitle>
+              <v-list-item-title class="text-body-2">{{ notification.content }}</v-list-item-title>
+              <v-list-item-subtitle class="text-caption">{{ formatTime(notification.createdTime) }}</v-list-item-subtitle>
             </v-list-item>
           </v-list>
         </v-card-text>
@@ -225,6 +223,9 @@ export default {
       maxRecentSearches: 20, // 최대 저장 개수
       userId: null,
       profileImage: null,
+      notifications: [],
+      page: 0,
+      size: 20,
     }
   },
   created() {
@@ -483,6 +484,42 @@ export default {
     goToPostCreate() {
       this.$router.push('/post/create')
     },
+    async loadNotifications() {
+      try {
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/alarm/list?page=${this.page}&size=${this.size}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        this.notifications = response.data.result.content;
+      } catch (error) {
+        console.error('알림 로드 실패:', error);
+      }
+    },
+    formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+      
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 0) return `${days}일 전`;
+      if (hours > 0) return `${hours}시간 전`;
+      if (minutes > 0) return `${minutes}분 전`;
+      return '방금 전';
+    },
+    handleNotificationClick(notification) {
+      // 알림 클릭 시 해당 URL로 이동
+      if (notification.url) {
+        window.location.href = notification.url;
+      }
+      this.showNotification = false;
+    },
   },
   
   mounted() {
@@ -501,6 +538,13 @@ export default {
     // 이벤트 리스너가 있다면 제거
     if (this.handleSearch.cancel) {
       this.handleSearch.cancel()
+    }
+  },
+  watch: {
+    showNotification(newVal) {
+      if (newVal) {
+        this.loadNotifications();
+      }
     }
   }
 }
@@ -812,5 +856,26 @@ export default {
   height: 24px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.notification-sidebar {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 360px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.notification-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: #f5f5f5;
 }
 </style>
