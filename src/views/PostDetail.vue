@@ -106,7 +106,7 @@
                       <span class="created-time">{{ formatDate(comment.createdTime) }}</span>
                       <span class="like-count" 
                             v-if="comment.likeCount > 0" 
-                            @click="showLikeList(post.postId)">
+                            @click="showCommentLikeList(comment.id)">
                         좋아요 {{ comment.likeCount }}개
                       </span>
                       <button v-if="!comment.parentId" class="reply-button" @click="toggleReplyInput(comment)">답글 달기</button>
@@ -271,6 +271,44 @@
         </div>
       </div>
     </div>
+
+    <!-- 댓글 좋아요 목록 모달 -->
+    <div v-if="showCommentLikesModal" class="likes-modal-overlay" @click.self="closeCommentLikesModal">
+      <div class="likes-modal">
+        <div class="likes-modal-header">
+          <h2>좋아요</h2>
+          <button class="close-modal-btn" @click="closeCommentLikesModal">×</button>
+        </div>
+        
+        <div class="likes-list">
+          <div v-for="like in commentLikes" 
+               :key="like.id" 
+               class="like-item">
+            <div class="like-user-info">
+              <img 
+                :src="like.profileImg || '/images/default-profile.png'" 
+                @error="handleImageError" 
+                :alt="like.nickName"
+                class="like-profile-img"
+                @click="goToUserProfile(like.id)"
+              >
+              <span class="like-nickname" @click="goToUserProfile(like.id)">
+                {{ like.nickName }}
+              </span>
+            </div>
+            <button 
+              v-if="like.isFollow === 'N'" 
+              class="follow-button"
+              @click="followUser(like.id)"
+              :disabled="like.followLoading"
+            >
+              <span v-if="like.followLoading" class="loading-spinner"></span>
+              <span v-else>팔로우</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -294,7 +332,9 @@ export default {
       searchQuery: '',
       likesPage: 0,
       hasMoreLikes: true,
-      loading: false
+      loading: false,
+      showCommentLikesModal: false,
+      commentLikes: [],
     }
   },
   async created() {
@@ -325,8 +365,26 @@ export default {
     closeModal() {
       this.$router.push('/') // 또는 이전 페이지로 이동
     },
-    toggleLike() {
-      // 좋아요 토글 로직 구현
+    async toggleLike() {
+      try {
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post/like/${this.post.postId}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        )
+        if (response.data.status_code === 200) {
+          // 좋아요 상태 토글
+          this.post.isLike = this.post.isLike === 'Y' ? 'N' : 'Y'
+          // 좋아요 수 업데이트
+          this.post.postLikeCount = Number(this.post.postLikeCount) + (this.post.isLike === 'Y' ? 1 : -1)
+        }
+      } catch (error) {
+        console.error('좋아요 토글 실패:', error)
+      }
     },
     prevImage() {
       if (this.currentImageIndex > 0) {
@@ -372,8 +430,8 @@ export default {
           }
         )
         if (response.data.status_code === 200) {
-          comment.isLike = comment.isLike === 'Y' ? 'N' : 'Y'
-          comment.likeCount = Number(comment.likeCount) + (comment.isLike === 'Y' ? 1 : -1)
+          // 댓글 목록 새로고침
+          await this.fetchPostDetail()
         }
       } catch (error) {
         console.error('댓글 좋아요 토글 실패:', error)
@@ -603,6 +661,32 @@ export default {
       this.showLikesModal = false;
       this.searchQuery = '';
       this.likes = [];
+    },
+    async showCommentLikeList(commentId) {
+      try {
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/comment/like/list/${commentId}`,
+          {
+            params: {
+              page: 0,
+              size: 10
+            },
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        );
+        
+        console.log('서버 응답 데이터:', response.data.result);
+        this.commentLikes = response.data.result.content;
+        this.showCommentLikesModal = true;
+      } catch (error) {
+        console.error('댓글 좋아요 목록 로드 실패:', error);
+      }
+    },
+    closeCommentLikesModal() {
+      this.showCommentLikesModal = false;
+      this.commentLikes = [];
     }
   }
 }
@@ -874,6 +958,7 @@ export default {
 }
 
 .like-count {
+  cursor: pointer;
   font-size: 12px;
   color: #737373;
   font-weight: 600;
@@ -915,8 +1000,9 @@ export default {
 }
 
 .action-button i {
-  font-size: 22px;
+  font-size: 1.5rem;
   color: #262626;
+  transition: all 0.3s ease;
 }
 
 .action-button i.far.fa-heart {
@@ -925,6 +1011,7 @@ export default {
 
 .action-button i.fas.fa-heart.liked {
   color: #ed4956;
+  transform: scale(1.2);
 }
 
 .action-button:hover {
@@ -1304,5 +1391,94 @@ export default {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.likes-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.likes-modal {
+  background: white;
+  width: 400px;
+  max-height: 400px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.likes-modal-header {
+  padding: 16px;
+  border-bottom: 1px solid #dbdbdb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.likes-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-modal-btn {
+  position: absolute;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.likes-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px;
+}
+
+.like-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.like-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.like-profile-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.like-nickname {
+  font-weight: 600;
+}
+
+.follow-button {
+  background: #0095f6;
+  color: white;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
 }
 </style>
