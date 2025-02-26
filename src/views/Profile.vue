@@ -37,11 +37,11 @@
             <span class="stat-value">{{ profile.posts?.length || 0 }}</span>
             <span class="stat-label">게시물</span>
           </div>
-          <div class="stat-item">
+          <div class="stat-item" @click="showFollowerList" style="cursor: pointer;">
             <span class="stat-value">{{ profile.followerCount }}</span>
             <span class="stat-label">팔로워</span>
           </div>
-          <div class="stat-item">
+          <div class="stat-item" @click="showFollowingList" style="cursor: pointer;">
             <span class="stat-value">{{ profile.followingCount }}</span>
             <span class="stat-label">팔로잉</span>
           </div>
@@ -54,7 +54,12 @@
     </div>
 
     <div v-if="canViewPosts" class="posts-grid">
-      <div v-for="post in profile.posts" :key="post.postId" class="post-item">
+      <div v-for="post in profile.posts" 
+           :key="post.postId" 
+           class="post-item"
+           @click="goToPostDetail(post.postId)"
+           style="cursor: pointer;"
+      >
         <img 
           :src="post.imageUrl || '/images/default-post.png'" 
           @error="handleImageError"
@@ -115,6 +120,13 @@
         </form>
       </div>
     </div>
+
+    <!-- 팔로워/팔로잉 모달 -->
+    <FollowListModal 
+      v-if="showFollowModal"
+      :type="followModalType"
+      @close="showFollowModal = false"
+    />
   </div>
   <NotFound 
     v-else 
@@ -126,11 +138,13 @@
 import { jwtDecode } from 'jwt-decode'
 import axios from 'axios'
 import NotFound from '@/components/NotFound.vue'
+import FollowListModal from '@/components/FollowListModal.vue'
 
 export default {
   name: 'UserProfile',
   components: {
-    NotFound
+    NotFound,
+    FollowListModal
   },
   props: {
     id: {
@@ -158,7 +172,9 @@ export default {
         profileTxt: '',
         idVisibility: 'ALL',
         sex: 'OTHER'
-      }
+      },
+      showFollowModal: false,
+      followModalType: 'followers'
     }
   },
   computed: {
@@ -373,6 +389,14 @@ export default {
         idVisibility: this.profile.idVisibility,
         sex: this.profile.sex
       }
+    },
+    showFollowerList() {
+      this.followModalType = 'followers'
+      this.showFollowModal = true
+    },
+    showFollowingList() {
+      this.followModalType = 'following'
+      this.showFollowModal = true
     }
   },
   created() {
@@ -415,22 +439,26 @@ export default {
 
 .profile-header {
   display: flex;
-  gap: 80px;
+  gap: 30px;  /* 80px에서 30px로 줄임 */
   margin-bottom: 44px;
   padding: 0 20px;
+  align-items: center;  /* 중앙 정렬 추가 */
 }
 
-.profile-image {
+.profile-image-container {
   position: relative;
   width: 150px;
   height: 150px;
-  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 30px;
 }
 
 .profile-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
 }
 
 .profile-info {
@@ -445,12 +473,11 @@ export default {
   align-items: center;
   gap: 20px;
   margin-bottom: 20px;
-  flex-wrap: wrap; /* 필요시 줄바꿈 */
 }
 
 .profile-top h2 {
-  font-size: 28px;
-  font-weight: 300;
+  font-size: 20px;  /* 28px에서 20px로 줄임 */
+  font-weight: 400;  /* 300에서 400으로 변경 */
   margin: 0;
 }
 
@@ -463,17 +490,21 @@ export default {
   display: flex;
   gap: 40px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 
 .stat-item {
   display: flex;
   gap: 5px;
   align-items: center;
+  transition: opacity 0.2s;
+}
+
+.stat-item:hover {
+  opacity: 0.7;
 }
 
 .stat-value {
-  font-weight: 600;
+  font-weight: 500;  /* 600에서 500으로 변경 */
 }
 
 .stat-label {
@@ -481,9 +512,9 @@ export default {
 }
 
 .profile-bio {
-  white-space: pre-line;
-  max-width: 100%;
-  word-break: break-word;
+  font-size: 14px;  /* 글씨 크기 추가 */
+  line-height: 1.5;  /* 줄 간격 추가 */
+  color: #262626;
 }
 
 .edit-button, .follow-button {
@@ -512,17 +543,18 @@ export default {
 .posts-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  padding: 0;
-  max-width: 935px; /* 최대 너비 설정 */
-  width: 100%; /* 전체 너비 사용 */
-  margin: 0 auto; /* 가운데 정렬 */
+  gap: 28px;  /* 3px에서 28px로 변경 */
+  padding: 0 20px;  /* 패딩 추가 */
+  max-width: 935px;
+  width: 100%;
+  margin: 40px auto 0;  /* 상단 마진 추가 */
 }
 
 .post-item {
   position: relative;
   width: 100%;
-  padding-bottom: 100%;
+  padding-bottom: 100%;  /* 1:1 비율 유지 */
+  background-color: #fafafa;  /* 배경색 추가 */
 }
 
 .post-item img {
@@ -532,6 +564,7 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 3px;  /* 모서리 둥글게 */
 }
 
 .post-overlay {
@@ -546,6 +579,7 @@ export default {
   align-items: center;
   opacity: 0;
   transition: opacity 0.2s;
+  border-radius: 3px;  /* 오버레이도 둥글게 */
 }
 
 .post-item:hover .post-overlay {
@@ -579,7 +613,7 @@ export default {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 100%;    /* 전체 이미지 영역 커버 */
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -588,6 +622,7 @@ export default {
   opacity: 0;
   transition: opacity 0.3s;
   cursor: pointer;
+  border-radius: 50%;  /* 원형 오버레이 */
 }
 
 .image-upload-overlay:hover {
@@ -739,7 +774,7 @@ export default {
   }
 
   .posts-grid {
-    gap: 3px;
+    gap: 3px;  /* 모바일에서는 간격 줄임 */
     padding: 0;
   }
 }
@@ -762,6 +797,10 @@ export default {
   .stat-item {
     flex: 0 0 auto;
     min-width: 80px;
+  }
+
+  .posts-grid {
+    gap: 1px;  /* 더 작은 화면에서는 간격 더 줄임 */
   }
 }
 </style> 
