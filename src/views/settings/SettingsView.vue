@@ -79,9 +79,8 @@
           <div class="form-group">
             <label>성별</label>
             <select v-model="profileForm.sex">
-              <option value="MALE">남성</option>
-              <option value="FEMALE">여성</option>
-              <option value="OTHER">기타</option>
+              <option value="MAN">남성</option>
+              <option value="WOMAN">여성</option>
             </select>
           </div>
 
@@ -152,7 +151,8 @@ export default {
         nickName: '',
         profileImg: '',
         profileTxt: '',
-        idVisibility: 'ALL'
+        idVisibility: 'ALL',
+        sex: 'MAN'
       },
       blockedUsers: [],
       profileForm: {
@@ -177,20 +177,46 @@ export default {
   methods: {
     async loadProfile() {
       try {
-        const response = await axios.get(`${process.env.VUE_APP_API_BASE_URL}/user/myProfile`);
-        const profileData = response.data.result;
-        this.profile = profileData;
-        
-        // profileForm 초기화
-        this.profileForm = {
-          nickName: profileData.nickName,
-          profileTxt: profileData.profileTxt,
-          idVisibility: profileData.idVisibility,
-          sex: profileData.sex
-        };
+        const token = localStorage.getItem('token');
+        const decoded = jwtDecode(token);
+        const userId = decoded.sub;
+
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/user/detail/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        if (response.data.status_code === 200) {
+          const profileData = response.data.result;
+          this.profile = {
+            nickName: profileData.nickName,
+            profileImg: profileData.profileImg,
+            profileTxt: profileData.profileTxt,
+            idVisibility: profileData.idVisibility,
+            sex: profileData.sex
+          };
+          
+          // 편집 폼 초기화
+          this.initEditForm();
+        }
       } catch (error) {
         console.error('프로필 로드 실패:', error);
+        if (error.response?.status === 401) {
+          this.$router.push('/user/login');
+        }
       }
+    },
+    initEditForm() {
+      this.profileForm = {
+        nickName: this.profile.nickName,
+        profileTxt: this.profile.profileTxt,
+        idVisibility: this.profile.idVisibility,
+        sex: this.profile.sex
+      };
     },
     async saveProfile() {
       if (!this.validateForm()) {
@@ -198,14 +224,19 @@ export default {
       }
 
       try {
-        await axios.put(
+        // 요청 데이터 구조 수정
+        const profileData = {
+          nickName: this.profileForm.nickName,
+          profileTxt: this.profileForm.profileTxt || '', // null 방지
+          idVisibility: this.profileForm.idVisibility || 'ALL', // 기본값 설정
+          sex: this.profileForm.sex || 'MAN' // 기본값 설정
+        };
+
+        console.log('전송할 프로필 데이터:', profileData); // 디버깅용
+
+        const response = await axios.post(
           `${process.env.VUE_APP_API_BASE_URL}/user/profile/text`,
-          {
-            nickName: this.profileForm.nickName,
-            profileTxt: this.profileForm.profileTxt,
-            idVisibility: this.profileForm.idVisibility,
-            sex: this.profileForm.sex
-          },
+          profileData,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -214,17 +245,21 @@ export default {
           }
         );
 
-        // 프로필 정보 업데이트
-        this.profile = {
-          ...this.profile,
-          ...this.profileForm
-        };
+        if (response.data.status_code === 200) {
+          // 프로필 정보 업데이트
+          this.profile = {
+            ...this.profile,
+            ...this.profileForm
+          };
 
-        alert('프로필이 성공적으로 수정되었습니다.');
-        
-        // MyProfile 페이지로 리다이렉트
-        const userId = jwtDecode(localStorage.getItem('token')).sub;
-        this.$router.push(`/profile/${userId}`);
+          alert('프로필이 성공적으로 수정되었습니다.');
+          
+          // MyProfile 페이지로 리다이렉트
+          const userId = jwtDecode(localStorage.getItem('token')).sub;
+          this.$router.push(`/profile/${userId}`);
+        } else {
+          throw new Error(response.data.message || '프로필 수정에 실패했습니다.');
+        }
       } catch (error) {
         console.error('프로필 수정 실패:', error);
         if (error.response?.data?.message) {
@@ -294,13 +329,20 @@ export default {
           }
         );
         
-        if (response.data && response.data.result) {
+        if (response.data.status_code === 200) {
           this.profile.profileImg = response.data.result;
           await this.loadProfile();
+          alert('프로필 사진이 성공적으로 변경되었습니다.');
+        } else {
+          throw new Error('프로필 사진 업로드에 실패했습니다.');
         }
       } catch (error) {
-        console.error('이미지 업로드 실패:', error);
-        alert('이미지 업로드에 실패했습니다.');
+        console.error('이미지 업로드 중 오류 발생:', error);
+        
+        // 실제 서버 응답 에러인 경우에만 에러 메시지 표시
+        if (!this.profile.profileImg.includes(file.name)) {
+          alert('이미지 업로드에 실패했습니다.');
+        }
       }
     },
     async removeProfilePhoto() {
