@@ -288,20 +288,21 @@ export default {
         const userId = parseInt(this.id);
         
         if (this.isFollowing) {
+          // 언팔로우
           await axios.delete(
-            `${process.env.VUE_APP_API_BASE_URL}/follow/${userId}`,
+            `${process.env.VUE_APP_API_BASE_URL}/follow/toggle/${userId}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              },
-              data: { userId }
+              }
             }
           );
         } else {
+          // 팔로우
           await axios.post(
-            `${process.env.VUE_APP_API_BASE_URL}/follow/${userId}`,
-            { userId },
+            `${process.env.VUE_APP_API_BASE_URL}/follow/toggle/${userId}`,
+            {},  // 빈 객체 전송
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -310,8 +311,9 @@ export default {
             }
           );
         }
+        
         this.isFollowing = !this.isFollowing;
-        await this.loadProfile();
+        await this.loadProfile(); // 프로필 정보 새로고침
       } catch (error) {
         console.error('팔로우 토글 실패:', error);
         alert('팔로우 상태 변경에 실패했습니다.');
