@@ -11,6 +11,14 @@
               <span class="nickname">{{ post.nickName }}</span>
             </button>
             <span class="created-time">{{ formatDate(post.createdTime) }}</span>
+            <button v-if="post.isFollow === 'N' || post.isAnimating" 
+                    class="follow-btn" 
+                    @click="followUser(post.userId)"
+                    :disabled="post.followLoading || post.isAnimating">
+              <span v-if="post.followLoading" class="loading-spinner"></span>
+              <span v-else-if="post.showCheck" class="check-icon">✓</span>
+              <span v-else>팔로우</span>
+            </button>
           </div>
           <div class="header-right">
             <div class="more-options" v-if="post.userId === currentUserId">
@@ -56,8 +64,8 @@
         </div>
 
         <!-- 좋아요 수 -->
-        <div class="likes-count">
-          <strong>좋아요 {{ post.likeCount }}개</strong>
+        <div class="likes-count" @click="showLikeList(post.postId)">
+          <strong style="cursor: pointer;">좋아요 {{ post.likeCount }}개</strong>
         </div>
 
         <!-- 게시물 내용 -->
@@ -113,6 +121,57 @@
       </div>
     </div>
     <div v-if="loading" class="loading">로딩 중...</div>
+
+    <!-- 좋아요 목록 모달 -->
+    <div v-if="showLikesModal" class="likes-modal-overlay" @click.self="closeLikesModal">
+      <div class="likes-modal">
+        <div class="likes-modal-header">
+          <h2>좋아요</h2>
+          <button class="close-modal-btn" @click="closeLikesModal">×</button>
+        </div>
+        
+        <div class="likes-search">
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            placeholder="검색"
+            @input="filterLikes"
+          >
+        </div>
+
+        <div class="likes-list">
+          <div v-for="like in filteredLikes" 
+               :key="like.id" 
+               class="like-item">
+            <div class="like-user-info">
+              <img 
+                :src="like.profileImg || '/images/default-profile.png'" 
+                @error="handleImageError" 
+                :alt="like.nickName"
+                class="like-profile-img"
+                @click="goToUserProfile(like.id)"
+              >
+              <span class="like-nickname" @click="goToUserProfile(like.id)">
+                {{ like.nickName }}
+              </span>
+            </div>
+            <button 
+              v-if="like.isFollow === 'N'" 
+              class="follow-button"
+              @click="followUser(like.id)"
+              :disabled="like.followLoading"
+            >
+              <span v-if="like.followLoading" class="loading-spinner"></span>
+              <span v-else>팔로우</span>
+            </button>
+          </div>
+          <div v-if="likesLoading" class="loading-more">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -128,6 +187,13 @@ export default {
     const page = ref(0)
     const loading = ref(false)
     const hasMore = ref(true)
+    const showLikesModal = ref(false)
+    const likes = ref([])
+    const filteredLikes = ref([])
+    const searchQuery = ref('')
+    const likesPage = ref(0)
+    const hasMoreLikes = ref(true)
+    const likesLoading = ref(false)
 
     const fetchPosts = async () => {
       if (loading.value || !hasMore.value) return
@@ -153,7 +219,10 @@ export default {
           showFullContent: false,
           newComment: '',
           hashTag: post.hashTag.map(tag => tag.replace(/[[\]"\\s]/g, '')).filter(tag => tag !== ''),
-          isLike: post.isLike === "Y"
+          isLike: post.isLike === "Y",
+          followLoading: false,
+          showCheck: false,
+          isAnimating: false
         }))
         
         if (page.value === 0) {
@@ -279,6 +348,109 @@ export default {
       window.location.href = `/post/detail/${postId}`
     }
 
+    const showLikeList = async (postId) => {
+      showLikesModal.value = true
+      likes.value = []
+      likesPage.value = 0
+      hasMoreLikes.value = true
+      await fetchLikes(postId)
+    }
+
+    const fetchLikes = async (postId) => {
+      if (likesLoading.value || !hasMoreLikes.value) return
+      
+      likesLoading.value = true
+      try {
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post/like/list/${postId}`,
+          {
+            params: {
+              page: likesPage.value,
+              size: 10
+            },
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        )
+
+        const newLikes = response.data.result.content.map(like => ({
+          ...like,
+          followLoading: false
+        }))
+        
+        likes.value = [...likes.value, ...newLikes]
+        filterLikes()
+        
+        hasMoreLikes.value = newLikes.length === 10
+        likesPage.value++
+      } catch (error) {
+        console.error('좋아요 목록 로드 실패:', error)
+      } finally {
+        likesLoading.value = false
+      }
+    }
+
+    const filterLikes = () => {
+      if (!searchQuery.value) {
+        filteredLikes.value = likes.value
+        return
+      }
+      
+      filteredLikes.value = likes.value.filter(like =>
+        like.nickName.toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    }
+
+    const closeLikesModal = () => {
+      showLikesModal.value = false
+      searchQuery.value = ''
+      likes.value = []
+    }
+
+    const followUser = async (userId) => {
+      const post = posts.value.find(p => p.userId === userId)
+      if (!post || post.followLoading || post.isAnimating) return
+      
+      post.followLoading = true
+      post.isAnimating = true
+      const startTime = Date.now()
+      
+      try {
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/follow/toggle/${userId}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        )
+        
+        if (response.data.status_code === 200) {
+          // 최소 1.5초 대기
+          const elapsedTime = Date.now() - startTime
+          if (elapsedTime < 1500) {
+            await new Promise(resolve => setTimeout(resolve, 1500 - elapsedTime))
+          }
+          
+          post.followLoading = false
+          post.showCheck = true
+          
+          // 체크 아이콘 0.8초 표시 후 버튼 제거
+          await new Promise(resolve => setTimeout(resolve, 800))
+          post.showCheck = false
+          post.isFollow = 'Y'
+          await new Promise(resolve => setTimeout(resolve, 200))
+          post.isAnimating = false
+        }
+      } catch (error) {
+        console.error('팔로우 실패:', error)
+        post.followLoading = false
+        post.isAnimating = false
+      }
+    }
+
     onMounted(() => {
       fetchPosts()
       window.addEventListener('scroll', handleScroll)
@@ -300,7 +472,14 @@ export default {
       prevSlide,
       nextSlide,
       goToUserProfile,
-      goToPostDetail
+      goToPostDetail,
+      showLikesModal,
+      filteredLikes,
+      searchQuery,
+      likesLoading,
+      showLikeList,
+      closeLikesModal,
+      followUser
     }
   }
 }
@@ -341,28 +520,24 @@ export default {
 .user-info {
   display: flex;
   align-items: center;
+  padding: 2px;
 }
 
 .profile-button {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
-  margin-right: 5px;
-}
-
-.profile-button:hover {
-  opacity: 0.8;
+  margin-right: 8px;
 }
 
 .profile-image {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  margin-right: 10px;
-  object-fit: cover;
+  margin-right: 8px;
 }
 
 .nickname {
@@ -371,8 +546,7 @@ export default {
 
 .created-time {
   color: #8e8e8e;
-  font-size: 0.8em;
-  margin-top: 10px;
+  font-size: 14px;
 }
 
 .post-images {
@@ -412,7 +586,7 @@ export default {
   gap: 8px;  /* 버튼 사이의 간격 조정 */
 }
 
-.post-content, .likes-count, .comments-count, .created-time {
+.post-content, .likes-count, .comments-count{
   padding: 0 12px;
   margin-bottom: 8px;
 }
@@ -641,5 +815,157 @@ i {
 
 .comment-input input::placeholder {
   color: #8e8e8e;
+}
+
+.likes-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.likes-modal {
+  background: white;
+  border-radius: 12px;
+  width: 400px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.likes-modal-header {
+  padding: 16px;
+  border-bottom: 1px solid #dbdbdb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.likes-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-modal-btn {
+  position: absolute;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #262626;
+}
+
+.likes-search {
+  padding: 8px 16px;
+  border-bottom: 1px solid #dbdbdb;
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8e8e8e;
+}
+
+.likes-search input {
+  width: 100%;
+  padding: 8px 8px 8px 36px;
+  border: 1px solid #dbdbdb;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.likes-list {
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.like-item {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.like-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.like-profile-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.like-nickname {
+  font-weight: 600;
+  color: #262626;
+}
+
+.follow-btn {
+  background: transparent;
+  color: #0095f6;
+  border: none;
+  padding: 5px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  margin-left: auto;
+}
+
+.follow-btn:hover {
+  opacity: 0.7;
+}
+
+.follow-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #0095f6;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.check-icon {
+  display: inline-block;
+  color: #0095f6;
+  font-size: 14px;
+  animation: popIn 0.3s ease;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 </style>
