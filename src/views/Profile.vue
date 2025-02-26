@@ -37,11 +37,11 @@
             <span class="stat-value">{{ profile.posts?.length || 0 }}</span>
             <span class="stat-label">게시물</span>
           </div>
-          <div class="stat-item">
+          <div class="stat-item" @click="showFollowersList" style="cursor: pointer;">
             <span class="stat-value">{{ profile.followerCount }}</span>
             <span class="stat-label">팔로워</span>
           </div>
-          <div class="stat-item">
+          <div class="stat-item" @click="showFollowingList" style="cursor: pointer;">
             <span class="stat-value">{{ profile.followingCount }}</span>
             <span class="stat-label">팔로잉</span>
           </div>
@@ -120,6 +120,13 @@
         </form>
       </div>
     </div>
+
+    <!-- 팔로우 목록 모달 -->
+    <FollowListModal
+      v-if="showFollowModal"
+      :type="followModalType"
+      @close="showFollowModal = false"
+    />
   </div>
   <NotFound 
     v-else 
@@ -131,11 +138,13 @@
 import { jwtDecode } from 'jwt-decode'
 import axios from 'axios'
 import NotFound from '@/components/NotFound.vue'
+import FollowListModal from '@/components/FollowListModal.vue'
 
 export default {
   name: 'UserProfile',
   components: {
-    NotFound
+    NotFound,
+    FollowListModal
   },
   props: {
     id: {
@@ -163,7 +172,9 @@ export default {
         profileTxt: '',
         idVisibility: 'ALL',
         sex: 'OTHER'
-      }
+      },
+      showFollowModal: false,
+      followModalType: 'followers'
     }
   },
   computed: {
@@ -391,6 +402,14 @@ export default {
           userId: this.profile.userId || this.id  // profile.userId가 없으면 props의 id 사용
         }
       });
+    },
+    showFollowersList() {
+      this.followModalType = 'followers';
+      this.showFollowModal = true;
+    },
+    showFollowingList() {
+      this.followModalType = 'following';
+      this.showFollowModal = true;
     }
   },
   created() {
