@@ -142,7 +142,7 @@
             >
               <template v-slot:prepend>
                 <v-avatar size="40">
-                  <v-img :src="notification.senderProfileImg || '/images/default-profile.png'" />
+                  <v-img :src="notification.profileImage || '/images/default-profile.png'" />
                 </v-avatar>
               </template>
               <v-list-item-title class="text-body-2">{{ notification.content }}</v-list-item-title>
@@ -206,6 +206,9 @@ export default {
       userId: null,
       profileImage: null,
       sse: null,
+      notifications: [],
+      page: 0,
+      size: 20,
     }
   },
   created() {
@@ -473,30 +476,52 @@ export default {
     async loadNotifications() {
       try {
         const response = await axios.get(
-          `${process.env.VUE_APP_API_BASE_URL}/alarm/list?page=${this.page}&size=${this.size}`,
+          `${process.env.VUE_APP_API_BASE_URL}/alarm/list`,
           {
+            params: {
+              page: this.page,
+              size: this.size
+            },
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
           }
         );
+        console.log(response.data.result.content)
         this.notifications = response.data.result.content;
       } catch (error) {
         console.error('알림 로드 실패:', error);
       }
     },
-    formatTime(timestamp) {
-      const date = new Date(timestamp);
+    formatTime(timeArray) {
+      if (!Array.isArray(timeArray)) return '시간 정보 없음';
+      
+      // 배열에서 년,월,일,시,분,초 추출
+      const [year, month, day, hour, minute, second] = timeArray;
+      
+      // JavaScript Date 객체 생성 (월은 0부터 시작하므로 -1)
+      const date = new Date(year, month - 1, day, hour, minute, second);
       const now = new Date();
       const diff = now - date;
       
-      const minutes = Math.floor(diff / 60000);
+      // 시간 차이 계산
+      const minutes = Math.floor(diff / (1000 * 60));
       const hours = Math.floor(minutes / 60);
       const days = Math.floor(hours / 24);
 
-      if (days > 0) return `${days}일 전`;
-      if (hours > 0) return `${hours}시간 전`;
-      if (minutes > 0) return `${minutes}분 전`;
+      // 1일 이상 차이나면 "2024.02.27" 형식으로 표시
+      if (days > 0) {
+        return `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`;
+      }
+      // 1시간 이상 차이나면 "3시간 전"
+      if (hours > 0) {
+        return `${hours}시간 전`;
+      }
+      // 1분 이상 차이나면 "30분 전"
+      if (minutes > 0) {
+        return `${minutes}분 전`;
+      }
+      // 1분 미만이면 "방금 전"
       return '방금 전';
     },
     handleNotificationClick(notification) {
@@ -761,10 +786,24 @@ export default {
 
 .notification-item {
   border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .notification-item:hover {
   background-color: #f8f8f8;
+}
+
+.notification-sidebar {
+  position: fixed;
+  right: 0;
+  width: 380px;
+  top: 0;
+  height: 100vh;
+  background: white;
+  border-left: 1px solid #e0e0e0;
+  z-index: 1002;
+  overflow-y: auto;
 }
 
 .recent-searches {

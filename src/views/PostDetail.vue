@@ -260,9 +260,10 @@
               </span>
             </div>
             <button 
-              v-if="like.isFollow === 'N'" 
+              v-if="like.isFollow === 'N' || like.isAnimating" 
               class="follow-button"
-              @click="followUser(like.id)"
+              :class="{ 'fade-out': like.isFollow === 'Y' }"
+              @click="followLikeUser(like.id, false)"
               :disabled="like.followLoading"
             >
               <span v-if="like.followLoading" class="loading-spinner"></span>
@@ -301,9 +302,10 @@
               </span>
             </div>
             <button 
-              v-if="like.isFollow === 'N'" 
+              v-if="like.isFollow === 'N' || like.isAnimating" 
               class="follow-button"
-              @click="followUser(like.id)"
+              :class="{ 'fade-out': like.isFollow === 'Y' }"
+              @click="followLikeUser(like.id, true)"
               :disabled="like.followLoading"
             >
               <span v-if="like.followLoading" class="loading-spinner"></span>
@@ -664,7 +666,8 @@ export default {
 
         const newLikes = response.data.result.content.map(like => ({
           ...like,
-          followLoading: false
+          followLoading: false,
+          isAnimating: false
         }));
         
         this.likes = [...this.likes, ...newLikes];
@@ -708,8 +711,11 @@ export default {
           }
         );
         
-        console.log('서버 응답 데이터:', response.data.result);
-        this.commentLikes = response.data.result.content;
+        this.commentLikes = response.data.result.content.map(like => ({
+          ...like,
+          followLoading: false,
+          isAnimating: false
+        }));
         this.showCommentLikesModal = true;
       } catch (error) {
         console.error('댓글 좋아요 목록 로드 실패:', error);
@@ -745,6 +751,46 @@ export default {
         }
       } catch (error) {
         console.error('게시물 삭제 실패:', error);
+      }
+    },
+    async followLikeUser(userId, isCommentLike = false) {
+      const likes = isCommentLike ? this.commentLikes : this.likes;
+      const like = likes.find(l => l.id === userId);
+      
+      if (!like || like.followLoading || like.isAnimating) return;
+      
+      like.followLoading = true;
+      like.isAnimating = true;
+      
+      try {
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/follow/toggle/${userId}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        );
+        
+        if (response.data.status_code === 200) {
+          like.followLoading = false;
+          like.isFollow = 'Y';
+          
+          // 게시물 작성자가 팔로우된 경우 게시물의 팔로우 상태도 업데이트
+          if (this.post && this.post.userId === userId) {
+            this.post.isFollow = 'Y';
+          }
+          
+          // 애니메이션 후 버튼 숨기기
+          setTimeout(() => {
+            like.isAnimating = false;
+          }, 300);
+        }
+      } catch (error) {
+        console.error('팔로우 실패:', error);
+        like.followLoading = false;
+        like.isAnimating = false;
       }
     }
   }

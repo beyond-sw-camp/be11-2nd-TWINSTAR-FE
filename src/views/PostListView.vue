@@ -159,7 +159,7 @@
             <button 
               v-if="like.isFollow === 'N'" 
               class="follow-button"
-              @click="followUser(like.id)"
+              @click="followLikeUser(like.id)"
               :disabled="like.followLoading"
             >
               <span v-if="like.followLoading" class="loading-spinner"></span>
@@ -451,6 +451,39 @@ export default {
       }
     }
 
+    const followLikeUser = async (userId) => {
+      const like = likes.value.find(l => l.id === userId)
+      if (!like || like.followLoading) return
+      
+      like.followLoading = true
+      
+      try {
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/follow/toggle/${userId}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        )
+        
+        if (response.data.status_code === 200) {
+          like.isFollow = 'Y'
+          like.followLoading = false
+          
+          // 게시물 목록에서도 해당 유저의 팔로우 상태 업데이트
+          const relatedPost = posts.value.find(p => p.userId === userId)
+          if (relatedPost) {
+            relatedPost.isFollow = 'Y'
+          }
+        }
+      } catch (error) {
+        console.error('팔로우 실패:', error)
+        like.followLoading = false
+      }
+    }
+
     onMounted(() => {
       fetchPosts()
       window.addEventListener('scroll', handleScroll)
@@ -479,7 +512,8 @@ export default {
       likesLoading,
       showLikeList,
       closeLikesModal,
-      followUser
+      followUser,
+      followLikeUser
     }
   }
 }
@@ -969,5 +1003,36 @@ i {
   0% { transform: scale(0); }
   70% { transform: scale(1.2); }
   100% { transform: scale(1); }
+}
+
+.follow-button {
+  background: #0095f6;
+  color: white;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 1.0s ease;
+}
+
+.follow-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
