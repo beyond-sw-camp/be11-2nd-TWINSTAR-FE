@@ -1,5 +1,5 @@
 <template>
-  <div class="post-list" @scroll="handleScroll">
+  <div class="post-list">
     <!-- 게시물 리스트 -->
     <div class="posts-container">
       <div v-for="post in posts" :key="post.postId" class="post-card">
@@ -118,7 +118,7 @@
 
 <script>
 import axios from 'axios'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 export default {
   name: 'PostListView',
@@ -137,29 +137,24 @@ export default {
         const response = await axios.get(
           `${process.env.VUE_APP_API_BASE_URL}/post/list`,
           {
+            params: {
+              page: page.value,
+              size: 5
+            },
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
             }
           }
         )
-        // 응답 데이터 확인을 위한 콘솔 출력
-        console.log('서버 응답 데이터:', response.data.result.content)
         
-        const newPosts = response.data.result.content.map(post => {
-          // 해시태그 처리
-          let cleanedHashTags = post.hashTag.map(tag => {
-            return tag.replace(/[[\]"\\s]/g, '');
-          }).filter(tag => tag !== '');
-
-          return {
-            ...post,
-            currentSlide: 0,
-            showFullContent: false,
-            newComment: '',
-            hashTag: cleanedHashTags,
-            isLike: post.isLike === "Y"  // "Y"일 때만 true, 나머지는 false
-          }
-        })
+        const newPosts = response.data.result.content.map(post => ({
+          ...post,
+          currentSlide: 0,
+          showFullContent: false,
+          newComment: '',
+          hashTag: post.hashTag.map(tag => tag.replace(/[[\]"\\s]/g, '')).filter(tag => tag !== ''),
+          isLike: post.isLike === "Y"
+        }))
         
         if (page.value === 0) {
           posts.value = newPosts
@@ -196,12 +191,21 @@ export default {
       return `${weeks}주 전`
     }
 
-    const handleScroll = (e) => {
-      const element = e.target
-      if (element.scrollHeight - element.scrollTop <= element.clientHeight + 100) {
-        fetchPosts()
+    const handleScroll = () => {
+      const scrollHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight
+      );
+      const scrollTop = Math.max(
+        document.documentElement.scrollTop,
+        document.body.scrollTop
+      );
+      const clientHeight = document.documentElement.clientHeight;
+
+      if (scrollHeight - scrollTop <= clientHeight + 100) {
+        fetchPosts();
       }
-    }
+    };
 
     const showMore = (post) => {
       post.showFullContent = true
@@ -277,13 +281,17 @@ export default {
 
     onMounted(() => {
       fetchPosts()
+      window.addEventListener('scroll', handleScroll)
+    })
+
+    onUnmounted(() => {
+      window.removeEventListener('scroll', handleScroll)
     })
 
     return {
       posts,
       currentUserId,
       formatDate,
-      handleScroll,
       loading,
       showMore,
       toggleLike,
