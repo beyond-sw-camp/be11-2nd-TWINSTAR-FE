@@ -37,11 +37,11 @@
             <span class="stat-value">{{ profile.posts?.length || 0 }}</span>
             <span class="stat-label">게시물</span>
           </div>
-          <div class="stat-item">
+          <div class="stat-item" @click="showFollowerList" style="cursor: pointer;">
             <span class="stat-value">{{ profile.followerCount }}</span>
             <span class="stat-label">팔로워</span>
           </div>
-          <div class="stat-item">
+          <div class="stat-item" @click="showFollowingList" style="cursor: pointer;">
             <span class="stat-value">{{ profile.followingCount }}</span>
             <span class="stat-label">팔로잉</span>
           </div>
@@ -115,6 +115,13 @@
         </form>
       </div>
     </div>
+
+    <!-- 팔로워/팔로잉 모달 -->
+    <FollowListModal 
+      v-if="showFollowModal"
+      :type="followModalType"
+      @close="showFollowModal = false"
+    />
   </div>
   <NotFound 
     v-else 
@@ -126,11 +133,13 @@
 import { jwtDecode } from 'jwt-decode'
 import axios from 'axios'
 import NotFound from '@/components/NotFound.vue'
+import FollowListModal from '@/components/FollowListModal.vue'
 
 export default {
   name: 'UserProfile',
   components: {
-    NotFound
+    NotFound,
+    FollowListModal
   },
   props: {
     id: {
@@ -158,7 +167,9 @@ export default {
         profileTxt: '',
         idVisibility: 'ALL',
         sex: 'OTHER'
-      }
+      },
+      showFollowModal: false,
+      followModalType: 'followers'
     }
   },
   computed: {
@@ -373,6 +384,14 @@ export default {
         idVisibility: this.profile.idVisibility,
         sex: this.profile.sex
       }
+    },
+    showFollowerList() {
+      this.followModalType = 'followers'
+      this.showFollowModal = true
+    },
+    showFollowingList() {
+      this.followModalType = 'following'
+      this.showFollowModal = true
     }
   },
   created() {
@@ -420,17 +439,20 @@ export default {
   padding: 0 20px;
 }
 
-.profile-image {
+.profile-image-container {
   position: relative;
-  width: 150px;
+  width: 150px;  /* 인스타그램 스타일 크기 */
   height: 150px;
-  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 30px;
 }
 
 .profile-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
 }
 
 .profile-info {
@@ -470,6 +492,11 @@ export default {
   display: flex;
   gap: 5px;
   align-items: center;
+  transition: opacity 0.2s;
+}
+
+.stat-item:hover {
+  opacity: 0.7;
 }
 
 .stat-value {
@@ -579,7 +606,7 @@ export default {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 100%;    /* 전체 이미지 영역 커버 */
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -588,6 +615,7 @@ export default {
   opacity: 0;
   transition: opacity 0.3s;
   cursor: pointer;
+  border-radius: 50%;  /* 원형 오버레이 */
 }
 
 .image-upload-overlay:hover {

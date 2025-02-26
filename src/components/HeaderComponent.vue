@@ -616,6 +616,7 @@ export default {
   width: 24px;
   background: linear-gradient(90deg, #4776E6, #8E54E9);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -867,11 +868,12 @@ export default {
 }
 
 .bottom-section .nav-item i {
-  font-size: 18px;     /* 살짝 작게 */
+  font-size: 18px;
   width: 24px;
   background: linear-gradient(90deg, #4776E6, #8E54E9);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
-  opacity: 0.9;        /* 살짝 투명하게 */
+  opacity: 0.9;
 }
 </style>

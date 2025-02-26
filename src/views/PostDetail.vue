@@ -385,7 +385,21 @@ export default {
   },
   methods: {
     closeModal() {
-      this.$router.push('/') // 또는 이전 페이지로 이동
+      console.log('닫기 버튼 클릭됨');
+      console.log('현재 route:', this.$route);
+      
+      const { from, userId } = this.$route.query;
+      console.log('파라미터:', { from, userId });
+      
+      if (from === 'profile') {
+        // userId가 없어도 post.userId를 사용
+        const profileId = userId || this.post.userId;
+        console.log(`프로필(${profileId})로 이동`);
+        this.$router.push(`/profile/${profileId}`);
+      } else {
+        console.log('홈으로 이동');
+        this.$router.push('/');
+      }
     },
     async toggleLike() {
       try {
@@ -533,7 +547,8 @@ export default {
       comment.showReplies = !comment.showReplies;
     },
     goToUserProfile(userId) {
-      window.location.href = `/profile/${userId}`;
+      // window.location.href 대신 router 사용
+      this.$router.push(`/profile/${userId}`);
     },
     isCommentAuthor(comment) {
       return this.currentUserId && this.currentUserId === comment.userId;
