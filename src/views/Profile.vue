@@ -2,17 +2,11 @@
   <div v-if="!notFound" class="profile-container">
     <div class="profile-header">
       <div class="profile-image-container">
-      <div class="profile-image-container">
         <img 
           :src="profile.profileImg || '/images/default-profile.png'" 
           alt="Profile" 
           class="profile-image"
-          alt="Profile" 
-          class="profile-image"
           @error="handleImageError"
-        />
-        <div class="image-upload-overlay" @click="triggerImageUpload">
-          <v-icon>mdi-camera</v-icon>
         />
         <div class="image-upload-overlay" @click="triggerImageUpload">
           <v-icon>mdi-camera</v-icon>
@@ -23,7 +17,6 @@
           accept="image/*"
           style="display: none"
           @change="handleImageUpload"
-        />
         />
       </div>
       <div class="profile-info">
@@ -48,7 +41,6 @@
             <span class="stat-value">{{ profile.followerCount }}</span>
             <span class="stat-label">팔로워</span>
           </div>
-          <div class="stat-item" @click="showFollowingList" style="cursor: pointer;">
           <div class="stat-item" @click="showFollowingList" style="cursor: pointer;">
             <span class="stat-value">{{ profile.followingCount }}</span>
             <span class="stat-label">팔로잉</span>
@@ -147,13 +139,10 @@ import { jwtDecode } from 'jwt-decode'
 import axios from 'axios'
 import NotFound from '@/components/NotFound.vue'
 import FollowListModal from '@/components/FollowListModal.vue'
-import FollowListModal from '@/components/FollowListModal.vue'
 
 export default {
   name: 'UserProfile',
   components: {
-    NotFound,
-    FollowListModal
     NotFound,
     FollowListModal
   },
@@ -363,15 +352,7 @@ export default {
           this.profile.profileImg = response.data.result;
           await this.loadProfile(); // 프로필 새로고침
         }
-        );
-        
-        if (response.data && response.data.result) {
-          this.profile.profileImg = response.data.result;
-          await this.loadProfile(); // 프로필 새로고침
-        }
       } catch (error) {
-        console.error('이미지 업로드 실패:', error);
-        alert('이미지 업로드에 실패했습니다.');
         console.error('이미지 업로드 실패:', error);
         alert('이미지 업로드에 실패했습니다.');
       }
@@ -465,9 +446,8 @@ export default {
 }
 
 .profile-image-container {
-.profile-image-container {
   position: relative;
-  width: 150px;  /* 인스타그램 스타일 크기 */
+  width: 150px;
   height: 150px;
   border-radius: 50%;
   overflow: hidden;
@@ -475,11 +455,9 @@ export default {
 }
 
 .profile-image {
-.profile-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 50%;
   border-radius: 50%;
 }
 
@@ -632,11 +610,9 @@ export default {
 }
 
 .image-upload-overlay {
-.image-upload-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;    /* 전체 이미지 영역 커버 */
   width: 100%;    /* 전체 이미지 영역 커버 */
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
@@ -645,20 +621,12 @@ export default {
   align-items: center;
   opacity: 0;
   transition: opacity 0.3s;
-  transition: opacity 0.3s;
   cursor: pointer;
   border-radius: 50%;  /* 원형 오버레이 */
-  border-radius: 50%;  /* 원형 오버레이 */
 }
 
-.image-upload-overlay:hover {
 .image-upload-overlay:hover {
   opacity: 1;
-}
-
-.image-upload-overlay .v-icon {
-  color: white;
-  font-size: 24px;
 }
 
 .image-upload-overlay .v-icon {
@@ -735,24 +703,7 @@ export default {
     gap: 40px;
   }
 
-/* 태블릿 크기 (1024px 이하) */
-@media screen and (max-width: 1024px) {
-  .profile-container {
-    width: calc(100% - 240px);
-    margin-left: 240px;
-    padding: 20px;
-    overflow-x: hidden;
-  }
-
-  .profile-header {
-    padding: 0 20px;
-    gap: 40px;
-  }
-
   .posts-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    padding: 0 20px;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
     padding: 0 20px;
