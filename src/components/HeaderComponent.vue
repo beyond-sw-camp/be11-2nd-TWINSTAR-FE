@@ -637,12 +637,13 @@ export default {
 .search-sidebar, .notification-sidebar, .message-sidebar {
   position: fixed;
   right: 0;
-  width: 400px;
+  width: 380px;
   top: 0;
   height: 100vh;
   background: white;
   border-left: 1px solid #e0e0e0;
-  z-index: 1001;
+  z-index: 1002;
+  overflow-y: auto;
 }
 
 .search-header {
@@ -812,5 +813,14 @@ export default {
   height: 24px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+/* 모바일 반응형 */
+@media screen and (max-width: 768px) {
+  .search-sidebar, .notification-sidebar, .message-sidebar {
+    width: 100%;
+    right: 0;
+    top: 0;
+  }
 }
 </style>

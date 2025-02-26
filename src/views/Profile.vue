@@ -404,7 +404,9 @@ export default {
   max-width: 935px;
   margin: 0 auto;
   padding: 30px 20px;
-  margin-left: calc(240px + 20px); /* 헤더 너비 + 여백 */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 컨테이너 내용 중앙 정렬 */
 }
 
 .profile-header {
@@ -506,22 +508,24 @@ export default {
 
 .posts-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3개의 동일한 크기 컬럼 */
-  gap: 28px;
-  margin-top: 40px;
-  width: 100%;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 0;
   max-width: 935px; /* 최대 너비 설정 */
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%; /* 전체 너비 사용 */
+  margin: 0 auto; /* 가운데 정렬 */
 }
 
 .post-item {
-  aspect-ratio: 1; /* 정사각형 유지 */
-  width: 100%;
   position: relative;
+  width: 100%;
+  padding-bottom: 100%;
 }
 
 .post-item img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -681,7 +685,7 @@ export default {
 /* 모바일 반응형 (768px 이하) */
 @media screen and (max-width: 768px) {
   .profile-container {
-    margin-left: 0;
+    margin: 0;
     padding: 15px;
   }
 
@@ -722,6 +726,11 @@ export default {
   .follow-button {
     width: 100%;
     max-width: 250px;
+  }
+
+  .posts-grid {
+    gap: 3px;
+    padding: 0;
   }
 }
 
