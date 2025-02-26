@@ -537,6 +537,7 @@ export default {
   margin-bottom: 30px;
   display: flex;
   justify-content: flex-start;
+  margin-left: 10px;  /* 로고 왼쪽 마진 추가 */
 }
 
 .collapsed .logo {
@@ -547,7 +548,8 @@ export default {
 }
 
 .logo img {
-  height: 32px;
+  height: 40px;  /* 로고 높이 증가 (기존보다 더 크게) */
+  width: auto;   /* 비율 유지를 위해 width는 auto */
 }
 
 .collapsed .logo img {
@@ -570,12 +572,13 @@ export default {
   text-decoration: none;
   gap: 12px;
   cursor: pointer;
+  margin-top: 10px;    /* 위쪽 마진 추가 */
+  margin-left: 10px;   /* 왼쪽 마진 추가 */
 }
 
 .nav-item:hover {
   background-color: #f8f9fa;
   border-radius: 6px;
-  margin: 0 8px;
 }
 
 .nav-item i {
@@ -587,8 +590,10 @@ export default {
 }
 
 .nav-item span {
-  font-size: 15px;
+  font-size: 1.1rem;  /* 살짝 작게 */
   color: #444444;
+  font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+  font-weight: 500; 
 }
 
 .more-btn {
@@ -822,5 +827,21 @@ export default {
     right: 0;
     top: 0;
   }
+}
+
+.bottom-section .nav-item span {
+  font-size: 1.15rem;  /* 살짝 작게 */
+  color: #444444;
+  font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+  font-weight: 500;    /* 살짝 얇게 */
+}
+
+.bottom-section .nav-item i {
+  font-size: 18px;     /* 살짝 작게 */
+  width: 24px;
+  background: linear-gradient(90deg, #4776E6, #8E54E9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.9;        /* 살짝 투명하게 */
 }
 </style>
