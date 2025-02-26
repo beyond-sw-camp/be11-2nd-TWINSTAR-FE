@@ -273,6 +273,8 @@ export default {
 }
 
 .post-create-card {
+  position: relative;
+  min-width: 240px;
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -500,25 +502,35 @@ export default {
   width: 100%;
 }
 
-@media (max-width: 768px) {
+/* 태블릿 크기 */
+@media screen and (max-width: 1024px) {
+  .post-create-container {
+    width: 100%;
+    margin-left: 240px;
+    padding: 15px;
+  }
+  
+  .post-create-layout {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+/* 모바일 크기 */
+@media screen and (max-width: 768px) {
   .post-create-container {
     width: 100%;
     margin-left: 0;
     padding: 10px;
   }
-
-  .post-create-layout {
-    grid-template-columns: 1fr;
+  
+  .post-create-card {
+    min-width: 100%;
   }
-
-  .slider-button {
-    width: 32px;
-    height: 32px;
-  }
-
-  .image-counter {
-    font-size: 10px;
-    padding: 3px 6px;
+  
+  .title {
+    font-size: 24px;
+    margin: 20px 0;
   }
 }
 </style>

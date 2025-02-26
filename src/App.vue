@@ -48,7 +48,7 @@ export default {
       return this.$route.path.startsWith('/admin');
     },
     shouldHideNav() {
-      return this.windowWidth <= 768;
+      return this.windowWidth <= 1350;
     }
   },
   methods: {
@@ -73,6 +73,17 @@ export default {
   display: none !important;
 }
 
+.main-content {
+  transition: margin-left 0.3s ease;
+}
+
+@media screen and (max-width: 1350px) {
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+}
+
 .admin-layout {
   display: flex;
   min-height: 100vh;
@@ -95,11 +106,5 @@ export default {
   width: 250px;
   background-color: #fff;
   border-right: 1px solid #e0e0e0;
-}
-
-@media screen and (max-width: 768px) {
-  .main-content {
-    margin-left: 0 !important;
-  }
 }
 </style>

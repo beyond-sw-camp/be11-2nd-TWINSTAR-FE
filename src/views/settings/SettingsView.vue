@@ -17,15 +17,7 @@
           @click="selectedMenu = 1"
         >
           <i class="fas fa-lock"></i>
-          개인정보
-        </div>
-        <div 
-          class="settings-item" 
-          :class="{ active: selectedMenu === 2 }"
-          @click="selectedMenu = 2"
-        >
-          <i class="fas fa-bell"></i>
-          알림
+          계정공개범위
         </div>
       </div>
     </div>
@@ -39,15 +31,8 @@
               @error="handleImageError" 
               alt="프로필 사진"
             >
-            <div class="photo-actions">
-              <button class="change-photo-btn" @click="triggerImageUpload">
-                <i class="fas fa-camera"></i>
-                프로필 사진 바꾸기
-              </button>
-              <button class="remove-photo-btn" @click="removeProfilePhoto">
-                <i class="fas fa-trash"></i>
-                현재 사진 삭제
-              </button>
+            <div class="photo-overlay" @click="triggerImageUpload">
+              <i class="fas fa-camera"></i>
             </div>
           </div>
           <input
@@ -57,6 +42,16 @@
             style="display: none"
             @change="handleImageUpload"
           >
+          <div class="photo-actions">
+            <button class="change-photo-btn" @click="triggerImageUpload">
+              <i class="fas fa-camera"></i>
+              프로필 사진 바꾸기
+            </button>
+            <button class="remove-photo-btn" @click="removeProfilePhoto">
+              <i class="fas fa-trash"></i>
+              현재 사진 삭제
+            </button>
+          </div>
         </div>
 
         <form @submit.prevent="saveProfile" class="profile-form">
@@ -136,25 +131,6 @@
           <button class="save-btn" @click="savePrivacy">저장</button>
         </div>
       </div>
-
-      <div v-if="selectedMenu === 2" class="settings-section">
-        <h3>차단된 계정</h3>
-        <div class="blocked-accounts">
-          <div v-if="blockedUsers.length === 0" class="no-blocked">
-            차단된 계정이 없습니다.
-          </div>
-          <div 
-            v-else 
-            v-for="user in blockedUsers" 
-            :key="user.id" 
-            class="blocked-user"
-          >
-            <img :src="user.profileImg || '/images/default-profile.png'" :alt="user.nickName">
-            <span>{{ user.nickName }}</span>
-            <button @click="unblockUser(user.id)">차단 해제</button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -170,8 +146,7 @@ export default {
       selectedMenu: 0,
       settingsMenu: [
         { title: '프로필 편집', icon: 'fas fa-user-edit' },
-        { title: '계정 공개 범위', icon: 'fas fa-lock' },
-        { title: '차단된 계정', icon: 'fas fa-user-slash' }
+        { title: '계정 공개 범위', icon: 'fas fa-lock' }
       ],
       profile: {
         nickName: '',
@@ -304,39 +279,44 @@ export default {
         return;
       }
 
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
+      const formData = new FormData();
+      formData.append('file', file);
 
+      try {
         const response = await axios.post(
           `${process.env.VUE_APP_API_BASE_URL}/user/profile/img`,
           formData,
           {
             headers: {
-              'Content-Type': 'multipart/form-data'
+              'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           }
         );
-
-        if (response.data.result) {
+        
+        if (response.data && response.data.result) {
           this.profile.profileImg = response.data.result;
-          alert('프로필 사진이 변경되었습니다.');
+          await this.loadProfile();
         }
       } catch (error) {
-        console.error('프로필 사진 업로드 실패:', error);
-        alert('프로필 사진 업로드에 실패했습니다.');
+        console.error('이미지 업로드 실패:', error);
+        alert('이미지 업로드에 실패했습니다.');
       }
     },
     async removeProfilePhoto() {
-      if (confirm('프로필 사진을 삭제하시겠습니까?')) {
-        try {
-          this.profile.profileImg = '/images/default-profile.png';
-          await this.saveProfile();
-          alert('프로필 사진이 삭제되었습니다.');
-        } catch (error) {
-          console.error('프로필 사진 삭제 실패:', error);
-          alert('프로필 사진 삭제에 실패했습니다.');
-        }
+      try {
+        await axios.delete(
+          `${process.env.VUE_APP_API_BASE_URL}/user/profile/img`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        this.profile.profileImg = '/images/default-profile.png';
+      } catch (error) {
+        console.error('프로필 사진 삭제 실패:', error);
+        alert('프로필 사진 삭제에 실패했습니다.');
       }
     },
     validateForm() {
@@ -440,26 +420,51 @@ export default {
 }
 
 .profile-photo {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 20px;
 }
 
 .profile-photo img {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+}
+
+.photo-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  cursor: pointer;
+}
+
+.photo-overlay:hover {
+  opacity: 1;
+}
+
+.photo-overlay i {
+  color: white;
+  font-size: 24px;
 }
 
 .photo-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.change-photo-btn,
-.remove-photo-btn {
+.change-photo-btn, .remove-photo-btn {
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
@@ -469,15 +474,15 @@ export default {
 }
 
 .change-photo-btn {
-  color: #0095f6;
-  background: none;
+  background-color: #0095f6;
+  color: white;
   border: none;
 }
 
 .remove-photo-btn {
+  background-color: transparent;
+  border: 1px solid #dbdbdb;
   color: #ed4956;
-  background: none;
-  border: none;
 }
 
 .form-group {

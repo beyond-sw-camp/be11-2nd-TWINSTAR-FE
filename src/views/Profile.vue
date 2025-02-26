@@ -1,15 +1,15 @@
 <template>
   <div v-if="!notFound" class="profile-container">
     <div class="profile-header">
-      <div class="profile-image">
+      <div class="profile-image-container">
         <img 
           :src="profile.profileImg || '/images/default-profile.png'" 
+          alt="Profile" 
+          class="profile-image"
           @error="handleImageError"
-          alt="프로필 이미지"
-        >
-        <div v-if="isMyProfile" class="image-overlay" @click="triggerImageUpload">
-          <i class="fas fa-camera"></i>
-          <span>프로필 사진 변경</span>
+        />
+        <div class="image-upload-overlay" @click="triggerImageUpload">
+          <v-icon>mdi-camera</v-icon>
         </div>
         <input
           type="file"
@@ -17,7 +17,7 @@
           accept="image/*"
           style="display: none"
           @change="handleImageUpload"
-        >
+        />
       </div>
       <div class="profile-info">
         <div class="profile-top">
@@ -54,7 +54,12 @@
     </div>
 
     <div v-if="canViewPosts" class="posts-grid">
-      <div v-for="post in profile.posts" :key="post.postId" class="post-item">
+      <div v-for="post in profile.posts" 
+           :key="post.postId" 
+           class="post-item"
+           @click="goToPostDetail(post.postId)"
+           style="cursor: pointer;"
+      >
         <img 
           :src="post.imageUrl || '/images/default-post.png'" 
           @error="handleImageError"
@@ -314,15 +319,15 @@ export default {
       this.$refs.imageInput.click()
     },
     async handleImageUpload(event) {
-      const file = event.target.files[0]
-      if (!file) return
+      const file = event.target.files[0];
+      if (!file) return;
 
-      const formData = new FormData()
-      formData.append('file', file)
+      const formData = new FormData();
+      formData.append('file', file);
 
       try {
         const response = await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/user/profile/image`,
+          `${process.env.VUE_APP_API_BASE_URL}/user/profile/img`,
           formData,
           {
             headers: {
@@ -330,12 +335,15 @@ export default {
               Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           }
-        )
-        this.profile.profileImg = response.data
-        alert('프로필 이미지가 업데이트되었습니다.')
+        );
+        
+        if (response.data && response.data.result) {
+          this.profile.profileImg = response.data.result;
+          await this.loadProfile(); // 프로필 새로고침
+        }
       } catch (error) {
-        console.error('이미지 업로드 실패:', error)
-        alert('이미지 업로드에 실패했습니다.')
+        console.error('이미지 업로드 실패:', error);
+        alert('이미지 업로드에 실패했습니다.');
       }
     },
     async updateProfile() {
@@ -370,6 +378,19 @@ export default {
         idVisibility: this.profile.idVisibility,
         sex: this.profile.sex
       }
+    },
+    goToPostDetail(postId) {
+      console.log('게시물 클릭됨:', postId);
+      console.log('현재 프로필:', this.profile);
+      console.log('현재 사용자 ID:', this.profile.userId); // userId 확인용
+      
+      this.$router.push({
+        path: `/post/detail/${postId}`,
+        query: {
+          from: 'profile',
+          userId: this.profile.userId || this.id  // profile.userId가 없으면 props의 id 사용
+        }
+      });
     }
   },
   created() {
@@ -400,6 +421,7 @@ export default {
 </script>
 
 <style scoped>
+/* 기본 프로필 컨테이너 스타일 */
 .profile-container {
   max-width: 935px;
   margin: 0 auto;
@@ -411,23 +433,26 @@ export default {
 
 .profile-header {
   display: flex;
-  gap: 80px;
+  gap: 30px;  /* 80px에서 30px로 줄임 */
   margin-bottom: 44px;
   padding: 0 20px;
+  align-items: center;  /* 중앙 정렬 추가 */
 }
 
-.profile-image {
+.profile-image-container {
   position: relative;
   width: 150px;
   height: 150px;
-  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 100px;  /* 30px에서 100px로 늘림 - 인스타그램 스타일 */
 }
 
-.profile-image img {
+.profile-image {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
+  border-radius: 50%;
 }
 
 .profile-info {
@@ -442,12 +467,11 @@ export default {
   align-items: center;
   gap: 20px;
   margin-bottom: 20px;
-  flex-wrap: wrap; /* 필요시 줄바꿈 */
 }
 
 .profile-top h2 {
-  font-size: 28px;
-  font-weight: 300;
+  font-size: 20px;  /* 28px에서 20px로 줄임 */
+  font-weight: 400;  /* 300에서 400으로 변경 */
   margin: 0;
 }
 
@@ -460,17 +484,17 @@ export default {
   display: flex;
   gap: 40px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 
 .stat-item {
   display: flex;
   gap: 5px;
   align-items: center;
+  font-size: 16px;  /* 글씨 크기 추가 */
 }
 
 .stat-value {
-  font-weight: 600;
+  font-weight: 500;  /* 600에서 500으로 변경 */
 }
 
 .stat-label {
@@ -478,9 +502,9 @@ export default {
 }
 
 .profile-bio {
-  white-space: pre-line;
-  max-width: 100%;
-  word-break: break-word;
+  font-size: 14px;  /* 글씨 크기 추가 */
+  line-height: 1.5;  /* 줄 간격 추가 */
+  color: #262626;
 }
 
 .edit-button, .follow-button {
@@ -509,17 +533,18 @@ export default {
 .posts-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  padding: 0;
-  max-width: 935px; /* 최대 너비 설정 */
-  width: 100%; /* 전체 너비 사용 */
-  margin: 0 auto; /* 가운데 정렬 */
+  gap: 28px;  /* 3px에서 28px로 변경 */
+  padding: 0 20px;  /* 패딩 추가 */
+  max-width: 935px;
+  width: 100%;
+  margin: 40px auto 0;  /* 상단 마진 추가 */
 }
 
 .post-item {
   position: relative;
   width: 100%;
-  padding-bottom: 100%;
+  padding-bottom: 100%;  /* 1:1 비율 유지 */
+  background-color: #fafafa;  /* 배경색 추가 */
 }
 
 .post-item img {
@@ -529,6 +554,7 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 3px;  /* 모서리 둥글게 */
 }
 
 .post-overlay {
@@ -543,6 +569,7 @@ export default {
   align-items: center;
   opacity: 0;
   transition: opacity 0.2s;
+  border-radius: 3px;  /* 오버레이도 둥글게 */
 }
 
 .post-item:hover .post-overlay {
@@ -572,26 +599,29 @@ export default {
   margin-bottom: 16px;
 }
 
-.image-overlay {
+.image-upload-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 100%;    /* 전체 이미지 영역 커버 */
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: white;
   opacity: 0;
+  transition: opacity 0.3s;
   cursor: pointer;
-  transition: opacity 0.2s;
+  border-radius: 50%;  /* 원형 오버레이 */
 }
 
-.image-overlay:hover {
+.image-upload-overlay:hover {
   opacity: 1;
+}
+
+.image-upload-overlay .v-icon {
+  color: white;
+  font-size: 24px;
 }
 
 .modal-overlay {
@@ -649,19 +679,24 @@ export default {
   cursor: pointer;
 }
 
-/* 태블릿 크기에서의 조정 */
-@media (max-width: 935px) {
-  .posts-grid {
-    gap: 15px;
-    padding: 0 15px;
+/* 태블릿 크기 (1024px 이하) */
+@media screen and (max-width: 1024px) {
+  .profile-container {
+    width: calc(100% - 240px);
+    margin-left: 240px;
+    padding: 20px;
+    overflow-x: hidden;
   }
-}
 
-/* 모바일 크기에서의 조정 */
-@media (max-width: 735px) {
+  .profile-header {
+    padding: 0 20px;
+    gap: 40px;
+  }
+
   .posts-grid {
-    gap: 3px;
-    padding: 0 3px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 0 20px;
   }
 }
 
@@ -729,7 +764,7 @@ export default {
   }
 
   .posts-grid {
-    gap: 3px;
+    gap: 3px;  /* 모바일에서는 간격 줄임 */
     padding: 0;
   }
 }
@@ -752,6 +787,10 @@ export default {
   .stat-item {
     flex: 0 0 auto;
     min-width: 80px;
+  }
+
+  .posts-grid {
+    gap: 1px;  /* 더 작은 화면에서는 간격 더 줄임 */
   }
 }
 </style> 
