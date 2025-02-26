@@ -1,15 +1,15 @@
 <template>
   <div v-if="!notFound" class="profile-container">
     <div class="profile-header">
-      <div class="profile-image">
+      <div class="profile-image-container">
         <img 
           :src="profile.profileImg || '/images/default-profile.png'" 
+          alt="Profile" 
+          class="profile-image"
           @error="handleImageError"
-          alt="프로필 이미지"
-        >
-        <div v-if="isMyProfile" class="image-overlay" @click="triggerImageUpload">
-          <i class="fas fa-camera"></i>
-          <span>프로필 사진 변경</span>
+        />
+        <div class="image-upload-overlay" @click="triggerImageUpload">
+          <v-icon>mdi-camera</v-icon>
         </div>
         <input
           type="file"
@@ -17,7 +17,7 @@
           accept="image/*"
           style="display: none"
           @change="handleImageUpload"
-        >
+        />
       </div>
       <div class="profile-info">
         <div class="profile-top">
@@ -314,15 +314,15 @@ export default {
       this.$refs.imageInput.click()
     },
     async handleImageUpload(event) {
-      const file = event.target.files[0]
-      if (!file) return
+      const file = event.target.files[0];
+      if (!file) return;
 
-      const formData = new FormData()
-      formData.append('file', file)
+      const formData = new FormData();
+      formData.append('file', file);
 
       try {
         const response = await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/user/profile/image`,
+          `${process.env.VUE_APP_API_BASE_URL}/user/profile/img`,
           formData,
           {
             headers: {
@@ -330,12 +330,15 @@ export default {
               Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           }
-        )
-        this.profile.profileImg = response.data
-        alert('프로필 이미지가 업데이트되었습니다.')
+        );
+        
+        if (response.data && response.data.result) {
+          this.profile.profileImg = response.data.result;
+          await this.loadProfile(); // 프로필 새로고침
+        }
       } catch (error) {
-        console.error('이미지 업로드 실패:', error)
-        alert('이미지 업로드에 실패했습니다.')
+        console.error('이미지 업로드 실패:', error);
+        alert('이미지 업로드에 실패했습니다.');
       }
     },
     async updateProfile() {
@@ -400,6 +403,7 @@ export default {
 </script>
 
 <style scoped>
+/* 기본 프로필 컨테이너 스타일 */
 .profile-container {
   max-width: 935px;
   margin: 0 auto;
@@ -423,10 +427,9 @@ export default {
   flex-shrink: 0;
 }
 
-.profile-image img {
+.profile-image {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
 }
 
@@ -572,26 +575,28 @@ export default {
   margin-bottom: 16px;
 }
 
-.image-overlay {
+.image-upload-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: white;
   opacity: 0;
+  transition: opacity 0.3s;
   cursor: pointer;
-  transition: opacity 0.2s;
 }
 
-.image-overlay:hover {
+.image-upload-overlay:hover {
   opacity: 1;
+}
+
+.image-upload-overlay .v-icon {
+  color: white;
+  font-size: 24px;
 }
 
 .modal-overlay {
@@ -649,19 +654,24 @@ export default {
   cursor: pointer;
 }
 
-/* 태블릿 크기에서의 조정 */
-@media (max-width: 935px) {
-  .posts-grid {
-    gap: 15px;
-    padding: 0 15px;
+/* 태블릿 크기 (1024px 이하) */
+@media screen and (max-width: 1024px) {
+  .profile-container {
+    width: calc(100% - 240px);
+    margin-left: 240px;
+    padding: 20px;
+    overflow-x: hidden;
   }
-}
 
-/* 모바일 크기에서의 조정 */
-@media (max-width: 735px) {
+  .profile-header {
+    padding: 0 20px;
+    gap: 40px;
+  }
+
   .posts-grid {
-    gap: 3px;
-    padding: 0 3px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 0 20px;
   }
 }
 
