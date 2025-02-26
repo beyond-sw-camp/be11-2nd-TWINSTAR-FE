@@ -45,7 +45,11 @@
                 </button>
               </div>
             </div>
-            <button v-if="post.isUpdate === 'Y'" class="more-btn">···</button>
+            <button v-if="post.userId === currentUserId" 
+                    class="more-options-btn"
+                    @click="showPostOptionsModal">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
           </div>
 
           <!-- 내용 -->
@@ -309,12 +313,21 @@
         </div>
       </div>
     </div>
+
+    <!-- 게시물 옵션 모달 -->
+    <div v-if="showOptionsModal" class="modal-overlay" @click.self="closeOptionsModal">
+      <div class="options-modal">
+        <button class="option-btn delete" @click="deletePost">삭제</button>
+        <button class="option-btn edit" @click="editPost">수정</button>
+        <button class="option-btn cancel" @click="closeOptionsModal">취소</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
 import { jwtDecode } from 'jwt-decode'
+import axios from 'axios'
 
 export default {
   name: 'PostDetail',
@@ -335,22 +348,31 @@ export default {
       loading: false,
       showCommentLikesModal: false,
       commentLikes: [],
+      showOptionsModal: false,
+      currentUserId: null
     }
   },
   async created() {
+    // 현재 사용자 ID 설정
+    const token = localStorage.getItem('token')
+    if (token) {
+      const decoded = jwtDecode(token)
+      this.currentUserId = Number(decoded.sub)
+    }
+
+    // 게시물 상세 정보 로드
     const postId = this.$route.params.postId
     try {
       const response = await axios.get(
         `${process.env.VUE_APP_API_BASE_URL}/post/detail/${postId}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         }
       )
-      console.log(response.data)
       
-      // PostListView.vue와 동일한 방식으로 해시태그 처리
+      // 해시태그 처리
       let cleanedHashTags = response.data.result.hashTag.map(tag => {
         return tag.replace(/[[\]"\\s]/g, '');
       }).filter(tag => tag !== '');
@@ -514,13 +536,7 @@ export default {
       window.location.href = `/profile/${userId}`;
     },
     isCommentAuthor(comment) {
-      let currentUserId = null;
-      const token = localStorage.getItem("token");
-      if (token) {
-        const decoded = jwtDecode(token);
-        currentUserId = Number(decoded.sub);
-      }
-      return currentUserId && currentUserId === comment.userId;
+      return this.currentUserId && this.currentUserId === comment.userId;
     },
     async deleteComment(commentId) {
       if (!confirm('댓글을 삭제하시겠습니까?')) return;
@@ -687,6 +703,34 @@ export default {
     closeCommentLikesModal() {
       this.showCommentLikesModal = false;
       this.commentLikes = [];
+    },
+    showPostOptionsModal() {
+      this.showOptionsModal = true;
+    },
+    closeOptionsModal() {
+      this.showOptionsModal = false;
+    },
+    editPost() {
+      this.$router.push(`/post/edit/${this.post.postId}`);
+      this.closeOptionsModal();
+    },
+    async deletePost() {
+      try {
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post/delete/${this.post.postId}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        if (response.data.status_code === 200) {
+          this.$router.push('/');
+        }
+      } catch (error) {
+        console.error('게시물 삭제 실패:', error);
+      }
     }
   }
 }
@@ -1393,92 +1437,71 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-.likes-modal-overlay {
+.more-options-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #262626;
+}
+
+.more-options-btn i {
+  font-size: 20px;
+}
+
+.more-options-btn:hover {
+  opacity: 0.7;
+}
+
+.options-modal {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 400px;
+}
+
+.option-btn {
+  width: 100%;
+  padding: 14px 0;
+  border: none;
+  background: none;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.option-btn:last-child {
+  border-bottom: none;
+}
+
+.option-btn.delete {
+  color: #ed4956;
+  font-weight: 700;
+}
+
+.option-btn.edit {
+  color: #262626;
+  font-weight: 600;
+}
+
+.option-btn.cancel {
+  color: #262626;
+}
+
+.option-btn:hover {
+  background-color: #fafafa;
+}
+
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-}
-
-.likes-modal {
-  background: white;
-  width: 400px;
-  max-height: 400px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-}
-
-.likes-modal-header {
-  padding: 16px;
-  border-bottom: 1px solid #dbdbdb;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-
-.likes-modal-header h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.close-modal-btn {
-  position: absolute;
-  right: 16px;
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.likes-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 16px;
-}
-
-.like-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-}
-
-.like-user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.like-profile-img {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.like-nickname {
-  font-weight: 600;
-}
-
-.follow-button {
-  background: #0095f6;
-  color: white;
-  border: none;
-  padding: 7px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
 }
 </style>
