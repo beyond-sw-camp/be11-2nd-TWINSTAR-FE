@@ -45,7 +45,11 @@
                 </button>
               </div>
             </div>
-            <button v-if="post.isUpdate === 'Y'" class="more-btn">···</button>
+            <button v-if="post.userId === currentUserId" 
+                    class="more-options-btn"
+                    @click="showPostOptionsModal">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
           </div>
 
           <!-- 내용 -->
@@ -106,7 +110,7 @@
                       <span class="created-time">{{ formatDate(comment.createdTime) }}</span>
                       <span class="like-count" 
                             v-if="comment.likeCount > 0" 
-                            @click="showLikeList(post.postId)">
+                            @click="showCommentLikeList(comment.id)">
                         좋아요 {{ comment.likeCount }}개
                       </span>
                       <button v-if="!comment.parentId" class="reply-button" @click="toggleReplyInput(comment)">답글 달기</button>
@@ -271,12 +275,59 @@
         </div>
       </div>
     </div>
+
+    <!-- 댓글 좋아요 목록 모달 -->
+    <div v-if="showCommentLikesModal" class="likes-modal-overlay" @click.self="closeCommentLikesModal">
+      <div class="likes-modal">
+        <div class="likes-modal-header">
+          <h2>좋아요</h2>
+          <button class="close-modal-btn" @click="closeCommentLikesModal">×</button>
+        </div>
+        
+        <div class="likes-list">
+          <div v-for="like in commentLikes" 
+               :key="like.id" 
+               class="like-item">
+            <div class="like-user-info">
+              <img 
+                :src="like.profileImg || '/images/default-profile.png'" 
+                @error="handleImageError" 
+                :alt="like.nickName"
+                class="like-profile-img"
+                @click="goToUserProfile(like.id)"
+              >
+              <span class="like-nickname" @click="goToUserProfile(like.id)">
+                {{ like.nickName }}
+              </span>
+            </div>
+            <button 
+              v-if="like.isFollow === 'N'" 
+              class="follow-button"
+              @click="followUser(like.id)"
+              :disabled="like.followLoading"
+            >
+              <span v-if="like.followLoading" class="loading-spinner"></span>
+              <span v-else>팔로우</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 게시물 옵션 모달 -->
+    <div v-if="showOptionsModal" class="modal-overlay" @click.self="closeOptionsModal">
+      <div class="options-modal">
+        <button class="option-btn delete" @click="deletePost">삭제</button>
+        <button class="option-btn edit" @click="editPost">수정</button>
+        <button class="option-btn cancel" @click="closeOptionsModal">취소</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
 import { jwtDecode } from 'jwt-decode'
+import axios from 'axios'
 
 export default {
   name: 'PostDetail',
@@ -294,23 +345,34 @@ export default {
       searchQuery: '',
       likesPage: 0,
       hasMoreLikes: true,
-      loading: false
+      loading: false,
+      showCommentLikesModal: false,
+      commentLikes: [],
+      showOptionsModal: false,
+      currentUserId: null
     }
   },
   async created() {
+    // 현재 사용자 ID 설정
+    const token = localStorage.getItem('token')
+    if (token) {
+      const decoded = jwtDecode(token)
+      this.currentUserId = Number(decoded.sub)
+    }
+
+    // 게시물 상세 정보 로드
     const postId = this.$route.params.postId
     try {
       const response = await axios.get(
         `${process.env.VUE_APP_API_BASE_URL}/post/detail/${postId}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         }
       )
-      console.log(response.data)
       
-      // PostListView.vue와 동일한 방식으로 해시태그 처리
+      // 해시태그 처리
       let cleanedHashTags = response.data.result.hashTag.map(tag => {
         return tag.replace(/[[\]"\\s]/g, '');
       }).filter(tag => tag !== '');
@@ -339,8 +401,26 @@ export default {
         this.$router.push('/');
       }
     },
-    toggleLike() {
-      // 좋아요 토글 로직 구현
+    async toggleLike() {
+      try {
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post/like/${this.post.postId}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        )
+        if (response.data.status_code === 200) {
+          // 좋아요 상태 토글
+          this.post.isLike = this.post.isLike === 'Y' ? 'N' : 'Y'
+          // 좋아요 수 업데이트
+          this.post.postLikeCount = Number(this.post.postLikeCount) + (this.post.isLike === 'Y' ? 1 : -1)
+        }
+      } catch (error) {
+        console.error('좋아요 토글 실패:', error)
+      }
     },
     prevImage() {
       if (this.currentImageIndex > 0) {
@@ -386,8 +466,8 @@ export default {
           }
         )
         if (response.data.status_code === 200) {
-          comment.isLike = comment.isLike === 'Y' ? 'N' : 'Y'
-          comment.likeCount = Number(comment.likeCount) + (comment.isLike === 'Y' ? 1 : -1)
+          // 댓글 목록 새로고침
+          await this.fetchPostDetail()
         }
       } catch (error) {
         console.error('댓글 좋아요 토글 실패:', error)
@@ -471,13 +551,7 @@ export default {
       this.$router.push(`/profile/${userId}`);
     },
     isCommentAuthor(comment) {
-      let currentUserId = null;
-      const token = localStorage.getItem("token");
-      if (token) {
-        const decoded = jwtDecode(token);
-        currentUserId = Number(decoded.sub);
-      }
-      return currentUserId && currentUserId === comment.userId;
+      return this.currentUserId && this.currentUserId === comment.userId;
     },
     async deleteComment(commentId) {
       if (!confirm('댓글을 삭제하시겠습니까?')) return;
@@ -618,6 +692,60 @@ export default {
       this.showLikesModal = false;
       this.searchQuery = '';
       this.likes = [];
+    },
+    async showCommentLikeList(commentId) {
+      try {
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/comment/like/list/${commentId}`,
+          {
+            params: {
+              page: 0,
+              size: 10
+            },
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        );
+        
+        console.log('서버 응답 데이터:', response.data.result);
+        this.commentLikes = response.data.result.content;
+        this.showCommentLikesModal = true;
+      } catch (error) {
+        console.error('댓글 좋아요 목록 로드 실패:', error);
+      }
+    },
+    closeCommentLikesModal() {
+      this.showCommentLikesModal = false;
+      this.commentLikes = [];
+    },
+    showPostOptionsModal() {
+      this.showOptionsModal = true;
+    },
+    closeOptionsModal() {
+      this.showOptionsModal = false;
+    },
+    editPost() {
+      this.$router.push(`/post/edit/${this.post.postId}`);
+      this.closeOptionsModal();
+    },
+    async deletePost() {
+      try {
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/post/delete/${this.post.postId}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        if (response.data.status_code === 200) {
+          this.$router.push('/');
+        }
+      } catch (error) {
+        console.error('게시물 삭제 실패:', error);
+      }
     }
   }
 }
@@ -889,6 +1017,7 @@ export default {
 }
 
 .like-count {
+  cursor: pointer;
   font-size: 12px;
   color: #737373;
   font-weight: 600;
@@ -930,8 +1059,9 @@ export default {
 }
 
 .action-button i {
-  font-size: 22px;
+  font-size: 1.5rem;
   color: #262626;
+  transition: all 0.3s ease;
 }
 
 .action-button i.far.fa-heart {
@@ -940,6 +1070,7 @@ export default {
 
 .action-button i.fas.fa-heart.liked {
   color: #ed4956;
+  transform: scale(1.2);
 }
 
 .action-button:hover {
@@ -1319,5 +1450,73 @@ export default {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.more-options-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #262626;
+}
+
+.more-options-btn i {
+  font-size: 20px;
+}
+
+.more-options-btn:hover {
+  opacity: 0.7;
+}
+
+.options-modal {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 400px;
+}
+
+.option-btn {
+  width: 100%;
+  padding: 14px 0;
+  border: none;
+  background: none;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.option-btn:last-child {
+  border-bottom: none;
+}
+
+.option-btn.delete {
+  color: #ed4956;
+  font-weight: 700;
+}
+
+.option-btn.edit {
+  color: #262626;
+  font-weight: 600;
+}
+
+.option-btn.cancel {
+  color: #262626;
+}
+
+.option-btn:hover {
+  background-color: #fafafa;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 </style>

@@ -6,6 +6,7 @@ import { adminRouter } from '../admin/router/adminRoutes';
 import { jwtDecode } from 'jwt-decode';
 import UserManagement from '@/admin/views/UserManagement.vue';
 import { settingsRouter } from './settingsRouter';
+import PostCreate from '@/views/PostCreate.vue';
 
 const routes = [
     ...userRouter,
@@ -19,6 +20,16 @@ const routes = [
         component: UserManagement,
         meta: { requiresAdmin: true }  // 관리자 권한 필요
     },
+    {
+        path: '/post/create',
+        name: 'PostCreate',
+        component: PostCreate
+    },
+    {
+        path: '/post/edit/:postId',
+        name: 'PostEdit',
+        component: PostCreate
+    }
 ]
 
 const router = createRouter({

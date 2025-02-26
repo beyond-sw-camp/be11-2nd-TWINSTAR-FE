@@ -2,11 +2,17 @@
   <div v-if="!notFound" class="profile-container">
     <div class="profile-header">
       <div class="profile-image-container">
+      <div class="profile-image-container">
         <img 
           :src="profile.profileImg || '/images/default-profile.png'" 
           alt="Profile" 
           class="profile-image"
+          alt="Profile" 
+          class="profile-image"
           @error="handleImageError"
+        />
+        <div class="image-upload-overlay" @click="triggerImageUpload">
+          <v-icon>mdi-camera</v-icon>
         />
         <div class="image-upload-overlay" @click="triggerImageUpload">
           <v-icon>mdi-camera</v-icon>
@@ -17,6 +23,7 @@
           accept="image/*"
           style="display: none"
           @change="handleImageUpload"
+        />
         />
       </div>
       <div class="profile-info">
@@ -352,7 +359,15 @@ export default {
           this.profile.profileImg = response.data.result;
           await this.loadProfile(); // 프로필 새로고침
         }
+        );
+        
+        if (response.data && response.data.result) {
+          this.profile.profileImg = response.data.result;
+          await this.loadProfile(); // 프로필 새로고침
+        }
       } catch (error) {
+        console.error('이미지 업로드 실패:', error);
+        alert('이미지 업로드에 실패했습니다.');
         console.error('이미지 업로드 실패:', error);
         alert('이미지 업로드에 실패했습니다.');
       }
@@ -467,6 +482,7 @@ export default {
   margin-right: 100px;  /* 30px에서 100px로 늘림 - 인스타그램 스타일 */
 }
 
+.profile-image {
 .profile-image {
   width: 100%;
   height: 100%;
@@ -619,6 +635,7 @@ export default {
 }
 
 .image-upload-overlay {
+.image-upload-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -630,12 +647,19 @@ export default {
   align-items: center;
   opacity: 0;
   transition: opacity 0.3s;
+  transition: opacity 0.3s;
   cursor: pointer;
   border-radius: 50%;  /* 원형 오버레이 */
 }
 
 .image-upload-overlay:hover {
+.image-upload-overlay:hover {
   opacity: 1;
+}
+
+.image-upload-overlay .v-icon {
+  color: white;
+  font-size: 24px;
 }
 
 .image-upload-overlay .v-icon {
@@ -712,7 +736,24 @@ export default {
     gap: 40px;
   }
 
+/* 태블릿 크기 (1024px 이하) */
+@media screen and (max-width: 1024px) {
+  .profile-container {
+    width: calc(100% - 240px);
+    margin-left: 240px;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  .profile-header {
+    padding: 0 20px;
+    gap: 40px;
+  }
+
   .posts-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 0 20px;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
     padding: 0 20px;

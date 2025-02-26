@@ -765,15 +765,17 @@ i {
 
 .action-button i {
   font-size: 1.5rem;
-  color: #262626;  /* 기본 하트 색상 (검은색) */
+  color: #262626;
+  transition: all 0.3s ease;
 }
 
 .action-button i.far.fa-heart {
-  color: #262626;  /* 빈 하트 색상 */
+  color: #262626;
 }
 
 .action-button i.fas.fa-heart.liked {
-  color: #ed4956;  /* 채워진 하트 색상 (빨간색) */
+  color: #ed4956;
+  transform: scale(1.2);
 }
 
 .action-button:hover {

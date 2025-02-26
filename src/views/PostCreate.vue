@@ -1,26 +1,28 @@
 <template>
   <div class="post-create-container">
     <div class="post-create-card">
-      <h1 class="title">새 게시물 만들기</h1>
+      <h1 class="title">{{ isEditMode ? '게시물 수정' : '새 게시물 만들기' }}</h1>
       
       <div class="post-create-layout">
         <!-- 왼쪽: 이미지 업로드 영역 -->
         <div class="left-section">
           <div class="image-upload-area"
-               @click="triggerFileInput"
+               @click="handleImageAreaClick"
                @dragover.prevent
-               @drop.prevent="handleDrop">
+               @drop.prevent="handleDrop"
+               :class="{ 'disabled': isEditMode }">
             <input type="file" 
                    ref="fileInput" 
                    @change="handleImageUpload" 
                    multiple 
                    accept="image/*" 
-                   class="hidden">
+                   class="hidden"
+                   :disabled="isEditMode">
             
             <div v-if="imagePreviews.length === 0" class="upload-placeholder">
               <i class="fas fa-cloud-upload-alt"></i>
-              <p>이미지를 선택하세요</p>
-              <span class="upload-hint">클릭하거나 드래그하여 업로드</span>
+              <p>{{ isEditMode ? '수정 시 이미지 변경 불가' : '이미지를 선택하세요' }}</p>
+              <span v-if="!isEditMode" class="upload-hint">클릭하거나 드래그하여 업로드</span>
             </div>
             
             <div v-else class="image-slider">
@@ -120,6 +122,8 @@ export default {
   name: 'PostCreate',
   data() {
     return {
+      isEditMode: false,
+      postId: null,
       content: '',
       hashtagInput: '',
       hashtags: [],
@@ -131,19 +135,39 @@ export default {
       isDragging: false
     }
   },
+  async created() {
+    // URL에서 postId가 있으면 수정 모드
+    const postId = this.$route.params.postId
+    if (postId) {
+      this.isEditMode = true
+      this.postId = postId
+      await this.fetchPostData()
+    }
+  },
   methods: {
+    handleImageAreaClick() {
+      if (!this.isEditMode) {
+        this.triggerFileInput();
+      }
+    },
     handleDrop(event) {
+      if (this.isEditMode) return;
+      
       const files = Array.from(event.dataTransfer.files).filter(file => 
         file.type.startsWith('image/')
-      )
+      );
       if (files.length > 0) {
-        this.processImages(files)
+        this.processImages(files);
       }
-      this.isDragging = false
+      this.isDragging = false;
     },
     handleImageUpload(event) {
-      const files = Array.from(event.target.files)
-      this.processImages(files)
+      if (this.isEditMode) return;
+      
+      const files = Array.from(event.target.files);
+      if (files.length > 0) {
+        this.processImages(files);
+      }
     },
     processImages(files) {
       this.imagePreviews = [] // 기존 미리보기 초기화
@@ -181,53 +205,95 @@ export default {
     removeHashtag(index) {
       this.hashtags.splice(index, 1)
     },
+    async fetchPostData() {
+      try {
+        const response = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/post/detail/${this.postId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          }
+        )
+        
+        if (response.data.status_code === 200) {
+          const postData = response.data.result
+          // 기존 데이터로 폼 초기화
+          this.content = postData.content
+          this.hashtags = postData.hashTag || []
+          
+          // 이미지 URL을 미리보기로 설정
+          this.imagePreviews = postData.imageList || []
+          this.visibility = postData.visibility || 'ALL'
+        }
+      } catch (error) {
+        console.error('게시물 데이터 로드 실패:', error)
+      }
+    },
     async createPost() {
       if (this.isSubmitting) return
       
       try {
         this.isSubmitting = true
-        const formData = new FormData()
-        
-        formData.append('content', this.content)
-        formData.append('visibility', this.visibility)
-        
-        if (this.hashtags && this.hashtags.length > 0) {
-          formData.append('hashTag', JSON.stringify(this.hashtags))
-        } else {
-          formData.append('hashTag', JSON.stringify([]))
-        }
-        
-        this.images.forEach(image => {
-          formData.append('imageFile', image)
-        })
 
-        console.log(formData)
-        const response = await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/post/create`,
-          formData,
-          {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'multipart/form-data'
-            }
+        if (this.isEditMode) {
+          // 수정 요청 데이터 구성
+          const updateData = {
+            postId: this.postId,
+            content: this.content,
+            hashTag: this.hashtags || [],
+            visibility: this.visibility
           }
-        )
 
-        console.log('서버 응답:', response.data)
+          const response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/post/update/${this.postId}`,
+            updateData,
+            {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
 
-        if (response.data.status_code === 200) {
-          const postId = response.data.result
-          if (postId) {
-            this.$router.push(`/post/detail/${postId}`)
+          if (response.data.status_code === 200) {
+            this.$router.push(`/post/detail/${this.postId}`)
+          }
+        } else {
+          // 새 게시물 작성 로직
+          const formData = new FormData()
+          formData.append('content', this.content)
+          formData.append('visibility', this.visibility)
+          
+          if (this.hashtags && this.hashtags.length > 0) {
+            formData.append('hashTag', JSON.stringify(this.hashtags))
           } else {
-            console.error('게시물 ID를 찾을 수 없습니다:', response.data)
-            alert('게시물이 작성되었지만 상세 페이지로 이동할 수 없습니다.')
-            this.$router.push('/')
+            formData.append('hashTag', JSON.stringify([]))
+          }
+          
+          if (this.images.length > 0) {
+            this.images.forEach(image => {
+              formData.append('imageFile', image)
+            })
+          }
+
+          const response = await axios.post(
+            `${process.env.VUE_APP_API_BASE_URL}/post/create`,
+            formData,
+            {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'multipart/form-data'
+              }
+            }
+          )
+
+          if (response.data.status_code === 200) {
+            this.$router.push(`/post/detail/${response.data.result}`)
           }
         }
       } catch (error) {
-        console.error('게시물 작성 실패:', error)
-        alert('게시물 작성에 실패했습니다.')
+        console.error(this.isEditMode ? '게시물 수정 실패:' : '게시물 작성 실패:', error)
       } finally {
         this.isSubmitting = false
       }
@@ -532,5 +598,14 @@ export default {
     font-size: 24px;
     margin: 20px 0;
   }
+}
+
+.image-upload-area.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.image-upload-area.disabled:hover {
+  background-color: #f8f9fa;
 }
 </style>
