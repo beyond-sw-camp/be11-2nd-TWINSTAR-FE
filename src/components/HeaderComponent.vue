@@ -28,7 +28,7 @@
           <span>메시지</span>
         </div>
         
-        <div class="nav-item" @click="openPostModal">
+        <div class="nav-item" @click="goToPostCreate">
           <i class="fas fa-image"></i>
           <span>게시물</span>
         </div>
@@ -183,24 +183,19 @@
     </div>
   </div>
 
-  <PostCreateModal 
-    v-if="showPostModal" 
-    @close="closePostModal"
-  />
+
 </template>
 
 <script>
 import { jwtDecode } from 'jwt-decode';
 import ChatView from '@/views/ChatView.vue'
 import axios from 'axios';
-import PostCreateModal from '@/views/PostCreateModal.vue'
 import { EventSourcePolyfill } from 'event-source-polyfill';
 
 export default {
   name: 'HeaderComponent',
   components: {
     ChatView,
-    PostCreateModal,
   },
   data() {
     return {
@@ -230,7 +225,6 @@ export default {
       maxRecentSearches: 20, // 최대 저장 개수
       userId: null,
       profileImage: null,
-      showPostModal: false,
     }
   },
   created() {
@@ -456,12 +450,6 @@ export default {
       this.showNotification = false;
       this.isSearchOpen = false;
     },
-    openPostModal() {
-      this.showPostModal = true;
-    },
-    closePostModal() {
-      this.showPostModal = false;
-    },
     sseConnect() {
       const token = localStorage.getItem("token")
       const options = {
@@ -491,6 +479,9 @@ export default {
           console.log("알림 권한:", permission);
         });
       }
+    },
+    goToPostCreate() {
+      this.$router.push('/post/create')
     },
   },
   
