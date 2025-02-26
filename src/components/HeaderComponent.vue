@@ -205,9 +205,7 @@ export default {
       maxRecentSearches: 20, // 최대 저장 개수
       userId: null,
       profileImage: null,
-      notifications: [],
-      page: 0,
-      size: 20,
+      sse: null,
     }
   },
   created() {
@@ -436,19 +434,25 @@ export default {
     sseConnect() {
       const token = localStorage.getItem("token")
       const options = {
-            heartbeatTimeout: 600000,  // 600초 동안 이벤트가 없으면 연결을 재시도
-            headers: {Authorization: `Bearer ${token}`}  // 쿠키와 인증 정보도 포함
+        heartbeatTimeout: 60000,
+        headers: {Authorization: `Bearer ${token}`}
       };
-      let sse = new EventSourcePolyfill(`${process.env.VUE_APP_API_BASE_URL}/alarm/subscribe`, options)
-      sse.addEventListener('connect', (event) => {
+      if (this.sse) {
+        this.sse.close();
+        console.log("기존 SSE 연결 닫음");
+      }
+      this.sse = new EventSourcePolyfill(`${process.env.VUE_APP_API_BASE_URL}/alarm/subscribe`, options)
+      
+      this.sse.addEventListener('connect', (event) => {
         console.log(event.data)
       })
-      sse.addEventListener('alarm', (event) => {
+      
+      this.sse.addEventListener('alarm', (event) => {
         console.log(event.data)
         if (Notification.permission === "granted") {
           const data = JSON.parse(event.data);
           new Notification("새 알림", {
-            body: data.content, // 서버에서 받은 메시지
+            body: data.content,
             icon: "https://twinstar.s3.ap-northeast-2.amazonaws.com/twinstarOnlyLog.png",
           }).onclick = () => {
             window.location.href = data.url;
@@ -517,9 +521,9 @@ export default {
   },
 
   beforeUnmount() {
-    // 이벤트 리스너가 있다면 제거
-    if (this.handleSearch.cancel) {
-      this.handleSearch.cancel()
+    if (this.sse) {
+      this.sse.close();
+      console.log("SSE 연결 닫음 (컴포넌트 언마운트)");
     }
   },
   watch: {
@@ -563,6 +567,7 @@ export default {
   margin-bottom: 30px;
   display: flex;
   justify-content: flex-start;
+  margin-left: 10px;  /* 로고 왼쪽 마진 추가 */
 }
 
 .collapsed .logo {
@@ -573,7 +578,8 @@ export default {
 }
 
 .logo img {
-  height: 32px;
+  height: 40px;  /* 로고 높이 증가 (기존보다 더 크게) */
+  width: auto;   /* 비율 유지를 위해 width는 auto */
 }
 
 .collapsed .logo img {
@@ -596,12 +602,13 @@ export default {
   text-decoration: none;
   gap: 12px;
   cursor: pointer;
+  margin-top: 10px;    /* 위쪽 마진 추가 */
+  margin-left: 10px;   /* 왼쪽 마진 추가 */
 }
 
 .nav-item:hover {
   background-color: #f8f9fa;
   border-radius: 6px;
-  margin: 0 8px;
 }
 
 .nav-item i {
@@ -613,8 +620,10 @@ export default {
 }
 
 .nav-item span {
-  font-size: 15px;
+  font-size: 1.1rem;  /* 살짝 작게 */
   color: #444444;
+  font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+  font-weight: 500; 
 }
 
 .more-btn {
@@ -663,12 +672,13 @@ export default {
 .search-sidebar, .notification-sidebar, .message-sidebar {
   position: fixed;
   right: 0;
-  width: 400px;
+  width: 380px;
   top: 0;
   height: 100vh;
   background: white;
   border-left: 1px solid #e0e0e0;
-  z-index: 1001;
+  z-index: 1002;
+  overflow-y: auto;
 }
 
 .search-header {
@@ -840,24 +850,28 @@ export default {
   object-fit: cover;
 }
 
-.notification-sidebar {
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 360px;
-  height: 100vh;
-  background-color: white;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  overflow-y: auto;
+/* 모바일 반응형 */
+@media screen and (max-width: 768px) {
+  .search-sidebar, .notification-sidebar, .message-sidebar {
+    width: 100%;
+    right: 0;
+    top: 0;
+  }
 }
 
-.notification-item {
-  cursor: pointer;
-  transition: background-color 0.2s;
+.bottom-section .nav-item span {
+  font-size: 1.15rem;  /* 살짝 작게 */
+  color: #444444;
+  font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+  font-weight: 500;    /* 살짝 얇게 */
 }
 
-.notification-item:hover {
-  background-color: #f5f5f5;
+.bottom-section .nav-item i {
+  font-size: 18px;     /* 살짝 작게 */
+  width: 24px;
+  background: linear-gradient(90deg, #4776E6, #8E54E9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.9;        /* 살짝 투명하게 */
 }
 </style>
