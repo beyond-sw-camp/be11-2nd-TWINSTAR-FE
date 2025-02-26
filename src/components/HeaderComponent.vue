@@ -3,7 +3,7 @@
     <div class="top-section">
       <div class="logo">
         <router-link to="/">
-          <img src="/logo2.png" alt="Twinstar Logo" />
+          <img src="/logo.png" alt="Twinstar Logo" />
         </router-link>
       </div>
       
