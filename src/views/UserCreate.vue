@@ -253,11 +253,12 @@ export default {
   min-height: 100vh;
   background: #f6f8ff;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .signup-box {
   background: white;
-  padding: 30px 40px;
+  padding: clamp(20px, 5vw, 40px);  /* 반응형 패딩 */
   border-radius: 20px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
   width: 100%;
@@ -272,7 +273,7 @@ export default {
 }
 
 .logo-image {
-  width: 200px !important;
+  width: min(200px, 80%) !important;  /* 반응형 로고 크기 */
   height: auto !important;
   max-width: 200px !important;
   display: block;
@@ -389,7 +390,7 @@ input:focus, select:focus {
 
 .error-message {
     position: absolute;
-    top: 0;
+    top: -10px;
     left: 0;
     color: #e53e3e;
     font-size: 0.8rem;
@@ -428,5 +429,57 @@ input:focus, select:focus {
 
 .signup-button:hover:not(:disabled) {
     background-color: #0056b3;
+}
+
+/* 모바일 디바이스를 위한 미디어 쿼리 추가 */
+@media screen and (max-width: 480px) {
+  .signup-container {
+    padding: 10px;
+  }
+
+  .signup-box {
+    border-radius: 15px;
+  }
+
+  input, select {
+    padding: 12px 15px 12px 40px !important;
+    font-size: 0.9rem;
+  }
+
+  .form-group i:not(.password-toggle) {
+    font-size: 14px;
+  }
+
+  .signup-button {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .register-link {
+    font-size: 0.85rem;
+  }
+
+  .error-message {
+    font-size: 0.75rem;
+  }
+}
+
+/* 작은 화면 높이를 위한 미디어 쿼리 */
+@media screen and (max-height: 700px) {
+  .signup-container {
+    padding: 10px 0;
+  }
+
+  .form-group {
+    margin-bottom: 8px;
+  }
+
+  .signup-button {
+    margin-top: 20px;
+  }
 }
 </style>
