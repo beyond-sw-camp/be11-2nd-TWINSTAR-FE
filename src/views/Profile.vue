@@ -401,32 +401,24 @@ export default {
 
 <style scoped>
 .profile-container {
-  min-height: 100vh;
-  padding: 20px;
-  margin-left: var(--sidebar-width, 240px);
-  width: calc(100% - var(--sidebar-width, 240px));
-  box-sizing: border-box;
-}
-
-.profile-content {
-  max-width: 935px; /* 인스타그램 스타일의 최대 너비 */
-  margin: 0 auto; /* 중앙 정렬 */
-  padding: 0 20px;
+  max-width: 935px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  margin-left: calc(240px + 20px); /* 헤더 너비 + 여백 */
 }
 
 .profile-header {
   display: flex;
-  align-items: flex-start;  /* 상단 정렬 */
+  gap: 80px;
   margin-bottom: 44px;
-  padding: 30px 0;
-  gap: 30px;
+  padding: 0 20px;
 }
 
 .profile-image {
+  position: relative;
   width: 150px;
   height: 150px;
-  margin-right: 0; /* 기존 margin 제거 */
-  position: relative;
+  flex-shrink: 0;
 }
 
 .profile-image img {
@@ -434,7 +426,6 @@ export default {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #dbdbdb;
 }
 
 .profile-info {
@@ -442,7 +433,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  text-align: left;  /* 왼쪽 정렬 */
 }
 
 .profile-top {
@@ -671,45 +661,35 @@ export default {
   }
 }
 
-/* 태블릿 및 모바일 반응형 스타일 */
+/* 태블릿 반응형 (768px ~ 1024px) */
 @media screen and (max-width: 1024px) {
   .profile-container {
+    margin-left: 20px;
+    padding: 20px;
+  }
+
+  .profile-header {
+    gap: 40px;
+  }
+
+  .profile-image {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* 모바일 반응형 (768px 이하) */
+@media screen and (max-width: 768px) {
+  .profile-container {
     margin-left: 0;
-    width: 100%;
     padding: 15px;
   }
 
   .profile-header {
     flex-direction: column;
     align-items: center;
+    gap: 30px;
     text-align: center;
-    gap: 20px;
-  }
-
-  .profile-info {
-    align-items: center;
-  }
-
-  .profile-top {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .profile-stats {
-    justify-content: center;
-    gap: 20px;
-  }
-
-  .posts-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .posts-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
   }
 
   .profile-image {
@@ -717,22 +697,52 @@ export default {
     height: 100px;
   }
 
-  .profile-top h2 {
-    font-size: 24px;
+  .profile-info {
+    align-items: center;
   }
 
   .profile-stats {
-    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    gap: 20px;
+  }
+
+  .profile-bio {
+    text-align: center;
+  }
+
+  .profile-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
     gap: 10px;
   }
 
-  .stat-item {
-    justify-content: center;
+  .edit-button, 
+  .follow-button {
+    width: 100%;
+    max-width: 250px;
+  }
+}
+
+/* 작은 모바일 화면 (480px 이하) */
+@media screen and (max-width: 480px) {
+  .profile-container {
+    padding: 10px;
   }
 
-  .modal-content {
-    width: 90%;
-    margin: 10px;
+  .profile-header {
+    gap: 20px;
+  }
+
+  .profile-stats {
+    flex-wrap: wrap;
+    justify-content: space-around;
+  }
+
+  .stat-item {
+    flex: 0 0 auto;
+    min-width: 80px;
   }
 }
 </style> 
