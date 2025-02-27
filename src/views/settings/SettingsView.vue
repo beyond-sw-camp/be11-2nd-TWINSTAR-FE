@@ -610,7 +610,7 @@ export default {
 }
 
 .submit-button:hover {
-  background-color: #0081d6;
+  background: linear-gradient(to right, #4776E6, #8E54E9);
 }
 
 .privacy-option {
@@ -648,7 +648,7 @@ export default {
 }
 
 .save-btn {
-  background-color: #0095f6;
+  background: linear-gradient(to right, #4776E6, #8E54E9);
   color: white;
   border: none;
   padding: 8px 16px;
@@ -657,7 +657,7 @@ export default {
 }
 
 .save-btn:hover {
-  background-color: #0081d6;
+  background: linear-gradient(to right, #4776E6, #8E54E9);
 }
 
 .save-btn:disabled {
