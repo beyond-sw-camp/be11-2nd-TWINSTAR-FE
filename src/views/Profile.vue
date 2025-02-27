@@ -197,6 +197,11 @@ export default {
     }
   },
   methods: {
+    goToPostDetail(postId){
+      this.$router.push({
+        path: `/post/detail/${postId}`,
+      })
+    },
     async loadProfile() {
       try {
         const token = localStorage.getItem('token');

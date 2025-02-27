@@ -7,17 +7,9 @@
             <h2>{{ isCollapsed ? 'TS' : 'TwinStar Admin' }}</h2>
         </div>
         <nav class="sidebar-nav">
-            <router-link to="/admin/dashboard" class="nav-item">
-                <i class="mdi mdi-view-dashboard"></i>
-                <span v-if="!isCollapsed">대시보드</span>
-            </router-link>
             <router-link to="/admin/users" class="nav-item">
                 <i class="mdi mdi-account-group"></i>
                 <span v-if="!isCollapsed">유저 관리</span>
-            </router-link>
-            <router-link to="/admin/posts" class="nav-item">
-                <i class="mdi mdi-post"></i>
-                <span v-if="!isCollapsed">게시물 관리</span>
             </router-link>
             <router-link to="/admin/reports" class="nav-item">
                 <i class="mdi mdi-flag"></i>
