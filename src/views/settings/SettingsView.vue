@@ -1,29 +1,7 @@
 <template>
   <div class="settings-container">
-    <div class="settings-sidebar">
-      <h2>설정</h2>
-      <div class="settings-nav">
-        <div 
-          class="settings-item" 
-          :class="{ active: selectedMenu === 0 }"
-          @click="selectedMenu = 0"
-        >
-          <i class="fas fa-user"></i>
-          프로필 편집
-        </div>
-        <div 
-          class="settings-item" 
-          :class="{ active: selectedMenu === 1 }"
-          @click="selectedMenu = 1"
-        >
-          <i class="fas fa-lock"></i>
-          계정공개범위
-        </div>
-      </div>
-    </div>
-
     <div class="settings-content">
-      <div v-if="selectedMenu === 0" class="settings-section">
+      <div class="settings-section">
         <div class="profile-edit-header">
           <div class="profile-photo">
             <img 
@@ -46,10 +24,6 @@
             <button class="change-photo-btn" @click="triggerImageUpload">
               <i class="fas fa-camera"></i>
               프로필 사진 바꾸기
-            </button>
-            <button class="remove-photo-btn" @click="removeProfilePhoto">
-              <i class="fas fa-trash"></i>
-              현재 사진 삭제
             </button>
           </div>
         </div>
@@ -95,40 +69,6 @@
 
           <button type="submit" class="submit-button">제출</button>
         </form>
-      </div>
-
-      <div v-if="selectedMenu === 1" class="settings-section">
-        <h3>계정 공개 범위</h3>
-        <div class="privacy-settings">
-          <div class="privacy-option">
-            <label>
-              <input 
-                type="radio" 
-                v-model="profile.idVisibility" 
-                value="ALL"
-              > 전체 공개
-            </label>
-          </div>
-          <div class="privacy-option">
-            <label>
-              <input 
-                type="radio" 
-                v-model="profile.idVisibility" 
-                value="FOLLOW"
-              > 팔로워만
-            </label>
-          </div>
-          <div class="privacy-option">
-            <label>
-              <input 
-                type="radio" 
-                v-model="profile.idVisibility" 
-                value="ONLYME"
-              > 나만 보기
-            </label>
-          </div>
-          <button class="save-btn" @click="savePrivacy">저장</button>
-        </div>
       </div>
     </div>
   </div>
@@ -404,61 +344,20 @@ export default {
   min-height: 100vh;
   background-color: white;
   width: 100%;
-}
-
-.settings-sidebar {
-  width: 30%; /* 픽셀 대신 퍼센트 사용 */
-  max-width: 240px;
-  min-width: 200px;
-  border-right: 1px solid #dbdbdb;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: fixed;
-  left: var(--header-width, 240px);
-  background: white;
-  z-index: 999;
-}
-
-.settings-sidebar h2 {
-  padding: 0 20px;
-  margin-bottom: 20px;
-}
-
-.settings-nav {
-  display: flex;
-  flex-direction: column;
-}
-
-.settings-item {
-  display: flex;
-  align-items: center;
-  padding: 15px 20px;
-  cursor: pointer;
-  gap: 12px;
-}
-
-.settings-item:hover {
-  background-color: #fafafa;
-}
-
-.settings-item.active {
-  font-weight: 600;
-  background-color: #fafafa;
-}
-
-.settings-item i {
-  width: 20px;
+  justify-content: center; /* 중앙 정렬 추가 */
+  padding: 40px 20px; /* 상하 여백 추가 */
 }
 
 .settings-content {
-  flex: 1;
-  padding: 40px;
-  margin-left: 580px; /* 사이드바 너비만큼 마진 */
+  width: 100%;
+  max-width: 600px; /* 최대 너비 설정 */
+  padding: 0 20px;
 }
 
 .settings-section {
-  max-width: 600px;
+  background: white;
+  border-radius: 8px;
+  padding: 30px;
 }
 
 .profile-edit-header {
@@ -510,25 +409,10 @@ export default {
   gap: 10px;
 }
 
-.change-photo-btn, .remove-photo-btn {
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .change-photo-btn {
   background: linear-gradient(to right, #4776E6, #8E54E9);  
   color: white;
   border: none;
-}
-
-.remove-photo-btn {
-  background-color: transparent;
-  border: 1px solid #dbdbdb;
-  color: #ed4956;
 }
 
 .form-group {
@@ -643,41 +527,21 @@ export default {
   cursor: not-allowed;
 }
 
-/* 태블릿 이하 화면 크기 */
+/* 반응형 스타일 수정 */
 @media (max-width: 992px) {
-  .settings-sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    border-right: none;
-    border-bottom: 1px solid #dbdbdb;
-  }
-
-  .settings-nav {
-    flex-direction: row;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
   .settings-content {
     margin-left: 0;
     padding: 20px;
   }
-
-  .settings-item {
-    padding: 10px 15px;
-  }
 }
 
-/* 모바일 화면 */
 @media (max-width: 576px) {
   .settings-container {
-    flex-direction: column;
+    padding: 20px 10px;
   }
 
-  .settings-content {
-    padding: 15px;
+  .settings-section {
+    padding: 20px;
   }
 
   .profile-photo {
