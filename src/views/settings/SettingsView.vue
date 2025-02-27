@@ -67,13 +67,17 @@
 
           <div class="form-group">
             <label>소개</label>
-            <textarea 
-              v-model="profileForm.profileTxt" 
-              rows="3"
-              :class="{ 'error': errors.profileTxt }"
-            ></textarea>
+            <div class="textarea-container">
+              <textarea
+                v-model="profileForm.profileTxt"
+                :maxlength="maxIntroLength"
+                rows="5"
+                placeholder="자기소개를 입력하세요"
+                :class="{ 'error': errors.profileTxt }"
+              ></textarea>
+              <span class="char-count">{{ profileForm.profileTxt.length }}/{{ maxIntroLength }}</span>
+            </div>
             <span class="error-message" v-if="errors.profileTxt">{{ errors.profileTxt }}</span>
-            <span class="char-count">{{ profileForm.profileTxt.length }}/150</span>
           </div>
 
           <div class="form-group">
@@ -164,7 +168,8 @@ export default {
       errors: {
         nickName: '',
         profileTxt: ''
-      }
+      },
+      maxIntroLength: 150
     }
   },
   computed: {
@@ -373,8 +378,8 @@ export default {
         this.errors.nickName = '닉네임은 20자를 초과할 수 없습니다.';
       }
 
-      if (this.profileForm.profileTxt && this.profileForm.profileTxt.length > 150) {
-        this.errors.profileTxt = '소개는 150자를 초과할 수 없습니다.';
+      if (this.profileForm.profileTxt && this.profileForm.profileTxt.length > this.maxIntroLength) {
+        this.errors.profileTxt = `자기소개는 ${this.maxIntroLength}자를 초과할 수 없습니다.`;
       }
 
       return !this.errors.nickName && !this.errors.profileTxt;
@@ -510,13 +515,16 @@ export default {
   gap: 10px;
 }
 
-.change-photo-btn, .remove-photo-btn {
+.change-photo-btn,
+.remove-photo-btn {
+  width: 500px;
+  border-radius: 15px;
   padding: 8px 16px;
-  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: center;  /* 텍스트 중앙 정렬을 위해 추가 */
 }
 
 .change-photo-btn {
@@ -526,9 +534,12 @@ export default {
 }
 
 .remove-photo-btn {
-  background-color: transparent;
-  border: 1px solid #dbdbdb;
-  color: #ed4956;
+  background: none;
+  background-image: linear-gradient(to right, #FF416C, #FF4B2B);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  border: none;
 }
 
 .form-group {
@@ -543,13 +554,24 @@ export default {
 }
 
 .form-group input,
-.form-group textarea,
 .form-group select {
-  width: 100%;
+  width: 500px;
   padding: 8px 12px;
   border: 1px solid #dbdbdb;
-  border-radius: 4px;
+  border-radius: 15px;
   font-size: 14px;
+}
+
+.form-group textarea {
+  width: 500px;
+  min-width: 500px;
+  max-width: 500px;
+  padding: 8px 12px;
+  padding-bottom: 30px;  /* 글자수 카운터를 위한 하단 여백 추가 */
+  border: 1px solid #dbdbdb;
+  border-radius: 15px;
+  font-size: 14px;
+  position: relative;  /* 부모 요소에 relative 설정 */
 }
 
 .form-group input:focus,
@@ -571,8 +593,8 @@ export default {
 
 .char-count {
   position: absolute;
-  right: 8px;
   bottom: 8px;
+  right: 12px;
   font-size: 12px;
   color: #8e8e8e;
 }
@@ -582,7 +604,7 @@ export default {
   color: white;
   border: none;
   padding: 8px 16px;
-  border-radius: 4px;
+  border-radius: 15px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -700,5 +722,29 @@ export default {
     text-align: right;
     margin-top: 5px;
   }
+}
+
+.textarea-container {
+  position: relative;
+  width: 500px;
+}
+
+.textarea-container textarea {
+  width: 100%;
+  min-width: 500px;
+  max-width: 500px;
+  padding: 8px 12px;
+  padding-bottom: 30px;
+  border: 1px solid #dbdbdb;
+  border-radius: 15px;
+  font-size: 14px;
+}
+
+.char-count {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 12px;
+  color: #8e8e8e;
 }
 </style> 
