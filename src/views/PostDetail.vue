@@ -405,6 +405,8 @@ export default {
     },
     async toggleLike() {
       try {
+        console.log("좋아요 시작")
+        console.log(this.post.postId);
         const response = await axios.post(
           `${process.env.VUE_APP_API_BASE_URL}/post/like/${this.post.postId}`,
           {},
@@ -414,6 +416,7 @@ export default {
             }
           }
         )
+        console.log(response)
         if (response.data.status_code === 200) {
           // 좋아요 상태 토글
           this.post.isLike = this.post.isLike === 'Y' ? 'N' : 'Y'

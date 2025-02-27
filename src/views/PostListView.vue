@@ -291,6 +291,7 @@ export default {
             }
           }
         )
+        console.log(response.data)
         if (response.data.status_code === 200) {
           post.isLike = !post.isLike
           post.likeCount = Number(post.likeCount) + (post.isLike ? 1 : -1)
