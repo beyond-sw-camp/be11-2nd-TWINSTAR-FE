@@ -407,13 +407,17 @@ export default {
 }
 
 .settings-sidebar {
-  width: 240px;
+  width: 30%; /* 픽셀 대신 퍼센트 사용 */
+  max-width: 240px;
+  min-width: 200px;
   border-right: 1px solid #dbdbdb;
-  padding: 20px 0;
-  position: fixed;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
+  position: fixed;
+  left: var(--header-width, 240px);
   background: white;
-  z-index: 10;
+  z-index: 999;
 }
 
 .settings-sidebar h2 {
@@ -450,7 +454,7 @@ export default {
 .settings-content {
   flex: 1;
   padding: 40px;
-  margin-left: 240px; /* 사이드바 너비만큼 마진 */
+  margin-left: 580px; /* 사이드바 너비만큼 마진 */
 }
 
 .settings-section {
@@ -516,7 +520,7 @@ export default {
 }
 
 .change-photo-btn {
-  background-color: #0095f6;
+  background: linear-gradient(to right, #4776E6, #8E54E9);  
   color: white;
   border: none;
 }
@@ -574,7 +578,7 @@ export default {
 }
 
 .submit-button {
-  background-color: #0095f6;
+  background: linear-gradient(to right, #4776E6, #8E54E9);
   color: white;
   border: none;
   padding: 8px 16px;
