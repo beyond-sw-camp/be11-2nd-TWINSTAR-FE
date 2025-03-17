@@ -448,6 +448,10 @@ export default {
           
           const newRoom = response.data;
           this.selectRoom(newRoom.roomId);
+
+          setTimeout(() => {
+            this.connectWebSocket();
+          }, 500);
         } catch (error) {
           console.error("채팅방 생성 실패:", error);
           alert("채팅방 생성에 실패했습니다.");
