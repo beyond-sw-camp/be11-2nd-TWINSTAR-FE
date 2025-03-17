@@ -573,6 +573,7 @@ export default {
   height: 32px;
   border-radius: 50%;
   margin-right: 8px;
+  object-fit: cover;
 }
 
 .nickname {
