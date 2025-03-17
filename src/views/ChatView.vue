@@ -301,10 +301,11 @@ export default {
       }
     },
 
-    connectWebSocket() {
+    cconnectWebSocket() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
+      // 기존 웹소켓 연결이 있으면 끊기
       if (this.stompClient && this.connected) {
         this.stompClient.disconnect();
       }
@@ -314,7 +315,7 @@ export default {
 
       this.stompClient.connect({ Authorization: `Bearer ${token}` }, (frame) => {
         this.connected = true;
-        console.log(" 웹소켓 연결 성공:", frame);
+        console.log("웹소켓 연결 성공:", frame);
 
         // 모든 채팅방을 구독
         this.chatRooms.forEach((room) => {
@@ -322,23 +323,17 @@ export default {
             const receivedMessage = JSON.parse(message.body);
             console.log("실시간 메시지 수신:", receivedMessage);
 
-            // 채팅방 찾기
             const chatRoomIndex = this.chatRooms.findIndex((r) => r.roomId === receivedMessage.roomId);
             if (chatRoomIndex !== -1) {
-              // 현재 채팅방 객체 복사
               const chatRoom = { ...this.chatRooms[chatRoomIndex] };
-              
-              // 현재 선택된 채팅방이 아닌 경우에만 안 읽은 메시지 수 증가
+
               if (receivedMessage.roomId !== this.selectedRoomId) {
                 chatRoom.notReadCount += 1;
               }
 
-              // 채팅방 목록에서 현재 채팅방 제거
               this.chatRooms.splice(chatRoomIndex, 1);
-              // 채팅방을 맨 앞으로 추가
               this.chatRooms.unshift(chatRoom);
 
-              // 현재 선택된 채팅방인 경우 메시지 추가 및 스크롤
               if (receivedMessage.roomId === this.selectedRoomId) {
                 this.chatMessages.push(receivedMessage);
                 this.$nextTick(() => this.scrollToBottom());
@@ -346,6 +341,15 @@ export default {
             }
           });
         });
+
+        // 10분 후 자동으로 웹소켓 연결 해제
+        setTimeout(() => {
+          if (this.stompClient && this.connected) {
+            this.stompClient.disconnect();
+            this.connected = false;
+            console.log("웹소켓 연결이 10분 후 자동 종료되었습니다.");
+          }
+        }, 10 * 60 * 1000); // 10분 (10 * 60초 * 1000밀리초)
       });
     },
 
@@ -449,9 +453,7 @@ export default {
           const newRoom = response.data;
           this.selectRoom(newRoom.roomId);
 
-          setTimeout(() => {
-            this.connectWebSocket();
-          }, 500);
+          window.location.reload();
         } catch (error) {
           console.error("채팅방 생성 실패:", error);
           alert("채팅방 생성에 실패했습니다.");
