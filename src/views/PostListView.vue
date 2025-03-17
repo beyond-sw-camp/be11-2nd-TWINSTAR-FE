@@ -714,6 +714,8 @@ i {
 
 .content {
   word-break: break-all;
+  display: block;
+  white-space: pre-wrap;
 }
 
 .content.truncated {
