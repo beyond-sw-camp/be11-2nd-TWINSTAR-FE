@@ -78,7 +78,7 @@
               <span class="content" :class="{ 'truncated': !post.showFullContent }">
                 {{ post.content }}
               </span>
-              <button v-if="post.content.length > 100 && !post.showFullContent" 
+              <button v-if="post.content.length > 30 && !post.showFullContent" 
                       class="more-button"
                       @click="showMore(post)">
                 ...더보기

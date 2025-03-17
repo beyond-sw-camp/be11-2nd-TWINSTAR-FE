@@ -618,7 +618,7 @@ export default {
     },
 
     goToUserDetail(userId) {
-      window.location.href = `http://localhost:8080/user/detail/${userId}`;
+      window.location.href = `https://www.alexandrelax.store/detail/${userId}`;
     },
 
     showChangeRoomName() {

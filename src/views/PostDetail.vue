@@ -982,6 +982,7 @@ export default {
   word-break: break-word;
   font-size: 14px;
   overflow: visible;
+  white-space: pre-line;
 }
 
 .hashtags {
