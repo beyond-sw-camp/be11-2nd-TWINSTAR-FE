@@ -17,7 +17,7 @@
             <span class="user-name">{{ user.nickName }}</span>
           </div>
           <button 
-            v-if="user.isFollow === 'N'" 
+            v-if="user.isFollow === 'N' && user.id !== currentUserId" 
             @click="followUser(user.id)"
             class="follow-button"
           >
@@ -35,6 +35,7 @@
 
 <script>
 import axios from 'axios'
+import { jwtDecode } from 'jwt-decode'
 
 export default {
   name: 'FollowListModal',
@@ -50,7 +51,8 @@ export default {
       users: [],
       loading: false,
       page: 0,
-      hasMore: true
+      hasMore: true,
+      currentUserId: null
     }
   },
   methods: {
@@ -61,8 +63,8 @@ export default {
       try {
         const userId = this.$route.params.id;
         const endpoint = this.type === 'followers' 
-          ? `follower/${userId}`  // 팔로워 목록 조회
-          : `following/${userId}`; // 팔로잉 목록 조회
+          ? `following/${userId}`  // 팔로워 목록 조회 엔드포인트 변경
+          : `follower/${userId}`;  // 팔로잉 목록 조회 엔드포인트 변경
           
         // 요청 URL 로깅 추가
         console.log(`Request URL: ${process.env.VUE_APP_API_BASE_URL}/follow/${endpoint}?page=${this.page}&size=20`);
@@ -99,28 +101,42 @@ export default {
     },
     async followUser(userId) {
       try {
-        await axios.post(
-          `${process.env.VUE_APP_API_BASE_URL}/follow/${userId}`,
-          { userId },
+        const response = await axios.post(
+          `${process.env.VUE_APP_API_BASE_URL}/follow/toggle/${userId}`,
+          {},
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'application/json'
+              Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           }
         );
-        
-        // 팔로우 상태 업데이트
-        const userIndex = this.users.findIndex(user => user.id === userId);
-        if (userIndex !== -1) {
-          this.users[userIndex].isFollow = 'Y';
+
+        if (response.data.status_code === 200) {
+          // 팔로우 성공 시 해당 유저의 isFollow 상태를 'Y'로 변경
+          const user = this.users.find(u => u.id === userId);
+          if (user) {
+            user.isFollow = 'Y';
+          }
+          
+          // 부모 컴포넌트의 프로필 정보 새로고침
+          if (this.$parent.loadProfile) {
+            await this.$parent.loadProfile();
+          }
         }
       } catch (error) {
         console.error('팔로우 실패:', error);
+        alert('팔로우에 실패했습니다.');
       }
     }
   },
   mounted() {
+    // 토큰에서 현재 사용자 ID 가져오기
+    const token = localStorage.getItem('token');
+    if (token) {
+      const decoded = jwtDecode(token);
+      this.currentUserId = parseInt(decoded.sub);
+    }
+    
     this.loadUsers();
     
     // 무한 스크롤

@@ -92,6 +92,7 @@
           <div class="form-group">
             <label>닉네임</label>
             <input v-model="editForm.nickName" type="text" required>
+            <span v-if="nickNameError" class="error-message">{{ nickNameError }}</span>
           </div>
           <div class="form-group">
             <label>소개</label>
@@ -174,7 +175,8 @@ export default {
         sex: 'OTHER'
       },
       showFollowModal: false,
-      followModalType: 'followers'
+      followModalType: 'followers',
+      nickNameError: ''
     }
   },
   computed: {
@@ -225,36 +227,36 @@ export default {
         
         console.log('프로필 응답:', response.data);
         
-        if (response.data && response.data.result) {
-          const result = response.data.result;
-          
-          // 프로필 이미지 URL 처리
-          const profileImg = result.profileImg 
-            ? (result.profileImg.startsWith('http') 
-              ? result.profileImg 
-              : `${process.env.VUE_APP_API_BASE_URL}${result.profileImg}`)
-            : '/images/default-profile.png';
-            
-          // 게시물 이미지 URL 처리 추가
-          const posts = result.posts?.map(post => ({
-            ...post,
-            imageUrl: post.imageUrl
-              ? (post.imageUrl.startsWith('http')
-                ? post.imageUrl
-                : `${process.env.VUE_APP_API_BASE_URL}${post.imageUrl}`)
-              : '/images/default-post.png'
-          })) || [];
+        if (response.data && response.data.status_code === 200) {
+          const profileData = response.data.result;
+          this.profile = {
+            nickName: profileData.nickName,
+            profileImg: profileData.profileImg,
+            profileTxt: profileData.profileTxt,
+            idVisibility: profileData.idVisibility,
+            sex: profileData.sex,
+            followerCount: profileData.followingCount,
+            followingCount: profileData.followerCount
+          };
           
           this.notFound = false;
           this.profile = {
-            ...result,
-            profileImg,
-            posts  // 수정된 게시물 배열로 업데이트
+            ...this.profile,
+            posts: profileData.posts?.map(post => ({
+              ...post,
+              imageUrl: post.imageUrl
+                ? (post.imageUrl.startsWith('http')
+                  ? post.imageUrl
+                  : `${process.env.VUE_APP_API_BASE_URL}${post.imageUrl}`)
+                : '/images/default-post.png'
+            })) || []
           };
           
           if (!this.isMyProfile) {
             await this.checkFollowStatus();
           }
+          
+          this.initEditForm();
         }
       } catch (error) {
         console.error('프로필 로딩 에러:', error);
@@ -294,7 +296,7 @@ export default {
         
         if (this.isFollowing) {
           // 언팔로우
-          await axios.delete(
+          await axios.post(
             `${process.env.VUE_APP_API_BASE_URL}/follow/toggle/${userId}`,
             {
               headers: {
@@ -366,7 +368,26 @@ export default {
     },
     async updateProfile() {
       try {
-        await axios.put(
+        // 닉네임 중복 체크
+        const checkResponse = await axios.get(
+          `${process.env.VUE_APP_API_BASE_URL}/user/check/nickname/${this.editForm.nickName}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+
+        // 현재 사용자의 닉네임과 같은 경우는 중복 체크 스킵
+        if (this.editForm.nickName !== this.profile.nickName && checkResponse.data.result) {
+          this.nickNameError = '이미 사용 중인 닉네임입니다. 다른 닉네임을 사용해주세요.';
+          return;
+        }
+
+        this.nickNameError = ''; // 에러 메시지 초기화
+
+        // 중복이 아닌 경우 프로필 업데이트 진행
+        const response = await axios.put(
           `${process.env.VUE_APP_API_BASE_URL}/user/profile/text`,
           this.editForm,
           {
@@ -375,18 +396,22 @@ export default {
               'Content-Type': 'application/json'
             }
           }
-        )
-        
-        this.profile = {
-          ...this.profile,
-          ...this.editForm
+        );
+
+        if (response.data.status_code === 200) {
+          this.profile = {
+            ...this.profile,
+            ...this.editForm
+          };
+          
+          this.showEditModal = false;
+          alert('프로필이 수정되었습니다.');
+        } else {
+          throw new Error('프로필 수정에 실패했습니다.');
         }
-        
-        this.showEditModal = false
-        alert('프로필이 수정되었습니다.')
       } catch (error) {
-        console.error('프로필 수정 실패:', error)
-        alert('프로필 수정에 실패했습니다.')
+        console.error('프로필 수정 실패:', error);
+        this.nickNameError = '이미 사용 중인 닉네임입니다. 다른 닉네임을 사용해주세요.';
       }
     },
     initEditForm() {
@@ -809,5 +834,17 @@ export default {
   .posts-grid {
     gap: 1px;  /* 더 작은 화면에서는 간격 더 줄임 */
   }
+}
+
+.error-message {
+  color: #ff3860;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  display: block;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  position: relative;
 }
 </style> 
